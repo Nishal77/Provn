@@ -1,0 +1,201 @@
+// ATTESTA — Main Database Schema
+// PostgreSQL 16 via Prisma 5.x
+//
+// Verification Tiers (highest → lowest trust):
+//   T1 Government  10/10  Onfido ZK government ID (Phase 3)
+//   T2 Employer     9/10  Employer co-signed on Polygon (Phase 5)
+//   T3 Institution  8/10  University / institution (Phase 12)
+//   T4 Peer         6/10  Peer co-attested (Phase 6)
+//   T5 AI Inferred  5/10  AI evaluation score (Phase 6)
+//   T6 Self         1/10  Self-reported — default for new users (Phase 1)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+enum VerificationTier {
+  T1_GOVERNMENT
+  T2_EMPLOYER
+  T3_INSTITUTION
+  T4_PEER
+  T5_AI_INFERRED
+  T6_SELF // Default for new users
+}
+
+// Auth providers — keep in sync with @attesta/shared AuthProvider enum
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  GITHUB
+  SIWE // Sign-In With Ethereum
+}
+
+// ─────────────────────────────────────────────────────────────
+// Core Identity
+// ─────────────────────────────────────────────────────────────
+
+// Central user record.
+// Each user maps to one W3C Decentralized Identifier (DID).
+// PII (email) encrypted at rest in production via AWS KMS.
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Email — encrypted in production (stored as KMS-tokenized ciphertext)
+  email         String?   @unique
+  emailVerified DateTime?
+
+  // Blockchain identity — created by Privy.io on first sign-up
+  did            String? @unique // e.g. "did:polygon:0xabc123..."
+  polygonAddress String? @unique // EVM wallet address from Privy
+
+  // Verification level — increases as user adds proof
+  kycTier VerificationTier @default(T6_SELF)
+
+  // Display info
+  name     String?
+  imageUrl String?
+
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+// OAuth and SIWE authentication accounts.
+// One user can have multiple accounts (e.g. email + GitHub + SIWE wallet).
+model Account {
+  id     String @id @default(cuid())
+  userId String
+
+  type              String       // "oauth" | "credentials" | "siwe"
+  provider          AuthProvider
+  providerAccountId String // OAuth "sub" OR wallet address for SIWE
+
+  // OAuth tokens (encrypted at rest in production)
+  accessToken  String? @db.Text
+  refreshToken String? @db.Text
+  expiresAt    Int?
+  tokenType    String?
+  scope        String?
+  idToken      String? @db.Text
+  sessionState String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// Auth.js browser sessions (stored in DB for server-side invalidation).
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// Email magic-link / OTP tokens (used by Resend provider in Auth.js).
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// API JWT Refresh Tokens
+// ─────────────────────────────────────────────────────────────
+
+// Tracks API refresh tokens for audit + revocation.
+// Actual token value lives in Redis (fast invalidation).
+// This table is the source of truth for revocation status.
+model RefreshToken {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  userId String
+
+  // SHA-256 hash of the raw token — never store raw tokens in DB
+  tokenHash String @unique
+
+  // Soft revocation — checked before any refresh attempt
+  revokedAt     DateTime?
+  revokedReason String? // "logout" | "rotated" | "suspicious"
+
+  // Audit trail
+  userAgent String?
+  ipAddress String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ProofWork Profile (Phase 2 — scaffolded here for Phase 1 FK)
+// ─────────────────────────────────────────────────────────────
+
+// Public-facing ProofWork profile — the candidate's verifiable resume.
+// Shareable at attesta.io/proof/{did}
+model Profile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Core fields
+  headline String? // e.g. "Senior Full-Stack Engineer"
+  bio      String? @db.Text
+  location String?
+  timezone String? // IANA timezone, e.g. "America/New_York"
+
+  // Social links
+  websiteUrl     String?
+  githubUsername String?
+  linkedinUrl    String?
+
+  // ATTESTA metrics
+  completenessScore Int     @default(0) // 0-100, shown during onboarding wizard
+  overallTrustScore Decimal @default(0) @db.Decimal(5, 2) // Weighted avg of attestations
+
+  // IPFS snapshot for OpenRep portability (Phase 8)
+  ipfsCid       String?
+  ipfsUpdatedAt DateTime?
+
+  // Privacy
+  isPublic     Boolean @default(true) // Show in RoleFit search
+  isSearchable Boolean @default(true) // Include in AI matching
+
+  @@map("profiles")
+}
