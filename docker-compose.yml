@@ -1,0 +1,50 @@
+version: '3.9'
+
+# ATTESTA local development infrastructure.
+# Provides PostgreSQL 16 and Redis 7.
+# The apps themselves run via pnpm dev (hot-reload), not in Docker.
+#
+# Usage:
+#   docker compose up -d          Start DB + Redis
+#   docker compose down           Stop and remove containers
+#   docker compose down -v        Also remove volumes (DESTROYS DATA)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: attesta-postgres
+    restart: unless-stopped
+    ports:
+      - '5433:5432' # Use 5433 to avoid conflict with local PostgreSQL on 5432
+    environment:
+      POSTGRES_USER: attesta
+      POSTGRES_PASSWORD: attesta_dev
+      POSTGRES_DB: attesta
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U attesta -d attesta']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: attesta-redis
+    restart: unless-stopped
+    ports:
+      - '6380:6379' # Use 6380 to avoid conflict with local Redis on 6379
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
