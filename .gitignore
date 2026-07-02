@@ -48,8 +48,7 @@ Thumbs.db
 npm-debug.log*
 pnpm-debug.log*
 
-# Prisma (migrations tracked separately)
-packages/db/prisma/migrations
+# Prisma migrations are tracked in version control
 
 # Vercel
 .vercel

@@ -7,11 +7,13 @@ import { jwtPlugin } from './plugins/jwt.js'
 import { redisPlugin } from './plugins/redis.js'
 import { prismaPlugin } from './plugins/prisma.js'
 import { rateLimitPlugin } from './plugins/rate-limit.js'
+import { bullmqPlugin } from './plugins/bullmq.js'
 import { healthRoute } from './routes/health.js'
 import { authRoutes } from './routes/auth/index.js'
 import { profileRoutes } from './routes/profile/index.js'
 import { kycRoutes } from './routes/kyc/index.js'
 import { employerRoutes } from './routes/employer/index.js'
+import { employmentRoutes } from './routes/employment/index.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -42,6 +44,7 @@ export async function buildApp() {
 
   // 4. Rate limiting (needs redis for distributed counters)
   await app.register(rateLimitPlugin)
+  await app.register(bullmqPlugin)
 
   // Routes
   await app.register(healthRoute)
@@ -49,6 +52,7 @@ export async function buildApp() {
   await app.register(profileRoutes, { prefix: '/profile' })
   await app.register(kycRoutes)
   await app.register(employerRoutes)
+  await app.register(employmentRoutes)
 
   return app
 }

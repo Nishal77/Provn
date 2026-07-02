@@ -79,7 +79,8 @@ model User {
   sessions      Session[]
   profile       Profile?
   refreshTokens RefreshToken[]
-  employerAdmin Employer[]     @relation("EmployerAdmin")
+  employerAdmin     Employer[]          @relation("EmployerAdmin")
+  employmentRecords EmploymentRecord[]  @relation("CandidateEmploymentRecords")
 
   @@map("users")
 }
@@ -221,6 +222,8 @@ model Employer {
   totalHires   Int @default(0)
   currentMonth Int @default(0) // hire count in current billing month
 
+  employmentRecords EmploymentRecord[] @relation("EmployerEmploymentRecords")
+
   @@index([adminUserId])
   @@map("employers")
 }
@@ -290,4 +293,74 @@ model Profile {
   isSearchable Boolean @default(true) // Include in AI matching
 
   @@map("profiles")
+}
+
+// ─────────────────────────────────────────────────────
+// Phase 5 — Employment Co-Sign
+// ─────────────────────────────────────────────────────
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+}
+
+// State machine: PENDING_EMPLOYER → SIGNED → ANCHORING → ANCHORED
+//                                          ↘ REJECTED
+//                PENDING_EMPLOYER → CANCELLED
+enum EmploymentRecordStatus {
+  PENDING_EMPLOYER // Candidate submitted; awaiting employer countersign
+  SIGNED           // Both parties signed; queued for Polygon anchor
+  ANCHORING        // BullMQ worker submitted the tx; waiting for confirmation
+  ANCHORED         // Tx confirmed; T2_EMPLOYER tier applied to candidate
+  REJECTED         // Employer explicitly rejected the record
+  CANCELLED        // Candidate cancelled before employer signed
+}
+
+// EmploymentRecord — co-signed employment attestation.
+// Employer receives a one-time email token and never needs an ATTESTA account.
+// After both parties sign, an async worker pins the doc to IPFS and updates
+// the candidate's DID on Polygon with T2_EMPLOYER tier.
+model EmploymentRecord {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidateId String
+  candidate   User     @relation("CandidateEmploymentRecords", fields: [candidateId], references: [id], onDelete: Cascade)
+
+  employerId String
+  employer   Employer @relation("EmployerEmploymentRecords", fields: [employerId], references: [id], onDelete: Restrict)
+
+  jobTitle       String
+  department     String?
+  startDate      DateTime
+  endDate        DateTime? // null = currently employed
+  employmentType EmploymentType @default(FULL_TIME)
+
+  // SHA-256 of the canonical JSON document — both parties implicitly sign this
+  documentHash String?
+
+  // Signature timestamps (the actual private-key sig is the countersign token delivery)
+  candidateSignedAt DateTime?
+  employerSignedAt  DateTime?
+
+  // Storage references — set after anchor job completes
+  ipfsCid         String?   // Pinata CID of the co-signed JSON document
+  chainTxHash     String?   // Polygon tx hash from DIDRegistry.update()
+  chainAnchoredAt DateTime? // Block timestamp of the anchor tx
+
+  status EmploymentRecordStatus @default(PENDING_EMPLOYER)
+
+  // One-time 32-byte hex token emailed to the employer.
+  // Nulled out after use (sign or reject) — cannot be replayed.
+  countersignToken          String?   @unique
+  countersignTokenExpiresAt DateTime?
+
+  @@index([candidateId])
+  @@index([employerId])
+  @@index([status])
+  @@map("employment_records")
 }

@@ -2,6 +2,7 @@
 export * from './types/user'
 export * from './types/auth'
 export * from './types/api'
+export * from './types/employment'
 
 // Constants
 export * from './constants/tiers'

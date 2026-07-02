@@ -42,6 +42,9 @@ const envSchema = z.object({
   // Frontend origin (used by Onfido SDK token referrer)
   WEB_URL: z.string().url().default('http://localhost:3000'),
 
+  // Phase 5 — Resend transactional email (co-sign requests, anchor confirmations)
+  RESEND_API_KEY: z.string().optional(), // re_... — get from resend.com dashboard
+
   // Phase 4 — Stripe billing
   STRIPE_SECRET_KEY: z.string().optional(),             // sk_test_... or sk_live_...
   // Without this, constructEvent() is skipped — attackers can forge Stripe events (fake payments).
