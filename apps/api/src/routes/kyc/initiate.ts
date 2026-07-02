@@ -66,6 +66,18 @@ export async function initiateRoute(app: FastifyInstance) {
           data: { sdkToken, applicantId },
         })
       } catch (err) {
+        const error = err as Error & { code?: string }
+
+        if (error.code === 'LIVENESS_REQUIRED') {
+          return reply.code(403).send({
+            success: false,
+            error: {
+              code: 'LIVENESS_REQUIRED',
+              message: 'Complete the 3D liveness check (Step 1) before document verification.',
+            },
+          })
+        }
+
         app.log.error({ err, userId }, 'KYC initiation failed')
         return reply.code(502).send({
           success: false,

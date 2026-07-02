@@ -115,14 +115,16 @@ export function createKycService(deps: KycServiceDeps) {
   }
 
   /**
-   * Trigger an Onfido document + facial similarity check.
+   * Trigger an Onfido document-only check.
+   * Facial similarity is handled by FaceTec 3D (ISO 30107-3) in Step 1 —
+   * adding it here would be redundant and delays the check result.
    */
   async function createCheck(applicantId: string): Promise<OnfidoCheck> {
     return onfidoRequest<OnfidoCheck>('/checks', {
       method: 'POST',
       body: JSON.stringify({
         applicant_id: applicantId,
-        report_names: ['document', 'facial_similarity_photo'],
+        report_names: ['document'],
         // ZK mode: Onfido destroys the captured media after check completes
         privacy_notices_read_date: new Date().toISOString(),
       }),
@@ -134,14 +136,24 @@ export function createKycService(deps: KycServiceDeps) {
   // ──────────────────────────────────────────────
 
   /**
-   * Start the KYC flow for a user.
+   * Start the Onfido document check for a user.
+   * Requires FaceTec 3D liveness to be completed first (facetecVerifiedAt set).
    * Returns the SDK token the frontend needs to initialise the Onfido SDK.
    */
   async function initiateKyc(userId: string): Promise<{ sdkToken: string; applicantId: string }> {
     const user = await db.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { name: true, onfidoApplicantId: true },
+      select: { name: true, onfidoApplicantId: true, facetecVerifiedAt: true },
     })
+
+    // FaceTec liveness must pass before Onfido document check is allowed.
+    // This ensures deepfake/Sybil prevention runs before identity document check.
+    if (!user.facetecVerifiedAt) {
+      throw Object.assign(
+        new Error('Liveness check required before document verification'),
+        { code: 'LIVENESS_REQUIRED' }
+      )
+    }
 
     // If they already have an applicant, reuse it (idempotent)
     if (user.onfidoApplicantId) {

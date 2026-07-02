@@ -63,7 +63,11 @@ model User {
   kycTier   VerificationTier @default(T6_SELF)
   kycStatus String?          @default("NONE") // NONE | PENDING | APPROVED | REJECTED
 
-  // Phase 3 — Onfido government ID verification
+  // Phase 3 — FaceTec 3D liveness (ISO 30107-3, Step 1 of KYC)
+  facetecSessionId  String?   // FaceTec session ID after successful liveness check
+  facetecVerifiedAt DateTime? // Timestamp of liveness pass — gates Onfido doc check
+
+  // Phase 3 — Onfido government ID verification (Step 2 of KYC — document only)
   onfidoApplicantId String? // Onfido applicant record ID (no PII stored here)
   onfidoCheckId     String? // Onfido check ID, used to reconcile webhook events
 
