@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { authenticate } from '../../middleware/authenticate.js'
+import { env } from '../../config/env.js'
 import { createEmployerService } from '../../services/employer.service.js'
 import { createCheckoutSession, constructWebhookEvent } from '../../services/stripe.service.js'
 
@@ -74,7 +75,7 @@ export async function employerBillingRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const sig = req.headers['stripe-signature'] as string | undefined
-      const secret = process.env.STRIPE_WEBHOOK_SECRET
+      const secret = env.STRIPE_WEBHOOK_SECRET
 
       if (!sig || !secret) {
         return reply.code(400).send({ error: 'Missing Stripe signature or webhook secret.' })

@@ -43,10 +43,11 @@ const envSchema = z.object({
   WEB_URL: z.string().url().default('http://localhost:3000'),
 
   // Phase 4 — Stripe billing
-  STRIPE_SECRET_KEY: z.string().optional(),         // sk_test_... or sk_live_...
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),     // whsec_...
-  STRIPE_PRICE_PER_HIRE: z.string().optional(),     // price_... for $99/hire
-  STRIPE_PRICE_SUBSCRIPTION: z.string().optional(), // price_... for $2K/month
+  STRIPE_SECRET_KEY: z.string().optional(),             // sk_test_... or sk_live_...
+  // Without this, constructEvent() is skipped — attackers can forge Stripe events (fake payments).
+  STRIPE_WEBHOOK_SECRET: z.string().min(1, 'STRIPE_WEBHOOK_SECRET required — whsec_... from Stripe Dashboard → Webhooks'),
+  STRIPE_PRICE_PER_HIRE: z.string().optional(),         // price_... for $99/hire
+  STRIPE_PRICE_SUBSCRIPTION: z.string().optional(),     // price_... for $2K/month
 })
 
 const parsed = envSchema.safeParse(process.env)

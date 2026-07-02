@@ -1,4 +1,5 @@
 import type Stripe from 'stripe'
+import { env } from '../config/env.js'
 
 // Lazy-initialise Stripe — only needed when billing routes are hit.
 // Key is optional; routes check env and return 503 if missing.
@@ -6,7 +7,7 @@ let _stripe: Stripe | null = null
 
 export function getStripe(): Stripe {
   if (_stripe) return _stripe
-  const key = process.env.STRIPE_SECRET_KEY
+  const key = env.STRIPE_SECRET_KEY
   if (!key) throw new Error('STRIPE_SECRET_KEY not configured')
   // Dynamically import so the module graph doesn't fail at startup when key is absent
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -16,12 +17,15 @@ export function getStripe(): Stripe {
   return _stripe
 }
 
-// Price IDs — set in Stripe dashboard and referenced here.
-// In dev these can be test-mode price IDs.
-export const STRIPE_PRICES = {
-  PER_HIRE: process.env.STRIPE_PRICE_PER_HIRE ?? 'price_per_hire_test',
-  SUBSCRIPTION: process.env.STRIPE_PRICE_SUBSCRIPTION ?? 'price_subscription_test',
-} as const
+// Price IDs — throws at call-time if unconfigured so misconfiguration surfaces
+// immediately as a readable error rather than a cryptic Stripe API rejection.
+export function getStripePrices(): { PER_HIRE: string; SUBSCRIPTION: string } {
+  const perHire = env.STRIPE_PRICE_PER_HIRE
+  const subscription = env.STRIPE_PRICE_SUBSCRIPTION
+  if (!perHire) throw new Error('STRIPE_PRICE_PER_HIRE not configured')
+  if (!subscription) throw new Error('STRIPE_PRICE_SUBSCRIPTION not configured')
+  return { PER_HIRE: perHire, SUBSCRIPTION: subscription }
+}
 
 export interface CreateCheckoutParams {
   employerId: string
@@ -34,6 +38,7 @@ export interface CreateCheckoutParams {
 
 export async function createCheckoutSession(params: CreateCheckoutParams): Promise<string> {
   const stripe = getStripe()
+  const prices = getStripePrices()
 
   // PER_HIRE → one-time payment mode; SUBSCRIPTION → recurring subscription mode
   const isSubscription = params.plan === 'SUBSCRIPTION'
@@ -44,7 +49,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
     mode: isSubscription ? 'subscription' : 'payment',
     line_items: [
       {
-        price: isSubscription ? STRIPE_PRICES.SUBSCRIPTION : STRIPE_PRICES.PER_HIRE,
+        price: isSubscription ? prices.SUBSCRIPTION : prices.PER_HIRE,
         quantity: 1,
       },
     ],
