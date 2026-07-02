@@ -53,3 +53,5 @@ packages/db/prisma/migrations
 
 # Vercel
 .vercel
+ATTESTA_PRD_v1.pdf
+CLAUDE.md
