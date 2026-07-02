@@ -77,3 +77,10 @@ export const ipfsService = {
     return `https://gateway.pinata.cloud/ipfs/${cid}`
   },
 }
+
+export type IpfsService = typeof ipfsService
+
+/** Factory used by KYC service — opts are advisory; the underlying singleton reads PINATA_JWT from env. */
+export function createIpfsService(_opts?: { pinataJwt?: string }): IpfsService {
+  return ipfsService
+}

@@ -1,4 +1,5 @@
 import Fastify from 'fastify'
+import fastifyRawBody from 'fastify-raw-body'
 import { env } from './config/env.js'
 import { corsPlugin } from './plugins/cors.js'
 import { cookiePlugin } from './plugins/cookie.js'
@@ -9,6 +10,8 @@ import { rateLimitPlugin } from './plugins/rate-limit.js'
 import { healthRoute } from './routes/health.js'
 import { authRoutes } from './routes/auth/index.js'
 import { profileRoutes } from './routes/profile/index.js'
+import { kycRoutes } from './routes/kyc/index.js'
+import { employerRoutes } from './routes/employer/index.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -26,6 +29,10 @@ export async function buildApp() {
   await app.register(corsPlugin)
   await app.register(cookiePlugin)
 
+  // Raw body access — needed for HMAC signature verification on Onfido webhooks.
+  // Must be registered before any route that reads req.rawBody.
+  await app.register(fastifyRawBody, { field: 'rawBody', global: false, encoding: 'utf8' })
+
   // 2. Infrastructure (DB, cache)
   await app.register(redisPlugin)
   await app.register(prismaPlugin)
@@ -40,6 +47,8 @@ export async function buildApp() {
   await app.register(healthRoute)
   await app.register(authRoutes, { prefix: '/auth' })
   await app.register(profileRoutes, { prefix: '/profile' })
+  await app.register(kycRoutes)
+  await app.register(employerRoutes)
 
   return app
 }

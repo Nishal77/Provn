@@ -40,7 +40,7 @@ export default function ProfileEditPage() {
 
     apiClient.profile.getMe(accessToken).then(res => {
       if (res.success) {
-        const { profile } = res.data as { profile: Partial<FormValues> }
+        const profile = (res.data as { profile: Partial<FormValues> }).profile
         reset({
           name: profile.name ?? '',
           headline: profile.headline ?? '',

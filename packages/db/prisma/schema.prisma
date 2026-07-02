@@ -60,7 +60,12 @@ model User {
   polygonAddress String? @unique // EVM wallet address from Privy
 
   // Verification level — increases as user adds proof
-  kycTier VerificationTier @default(T6_SELF)
+  kycTier   VerificationTier @default(T6_SELF)
+  kycStatus String?          @default("NONE") // NONE | PENDING | APPROVED | REJECTED
+
+  // Phase 3 — Onfido government ID verification
+  onfidoApplicantId String? // Onfido applicant record ID (no PII stored here)
+  onfidoCheckId     String? // Onfido check ID, used to reconcile webhook events
 
   // Display info
   name     String?
@@ -70,6 +75,7 @@ model User {
   sessions      Session[]
   profile       Profile?
   refreshTokens RefreshToken[]
+  employerAdmin Employer[]     @relation("EmployerAdmin")
 
   @@map("users")
 }
@@ -161,6 +167,84 @@ model RefreshToken {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Employer System (Phase 4)
+// ─────────────────────────────────────────────────────────────
+
+enum EmployerBillingPlan {
+  PER_HIRE        // $99/hire — pay-as-you-go
+  SUBSCRIPTION    // $2,000/month flat
+}
+
+enum EmployerStatus {
+  PENDING         // registered, domain not yet verified
+  ACTIVE          // domain verified, billing active
+  SUSPENDED       // billing lapsed or policy violation
+}
+
+// Legal entity that uses ATTESTA to hire.
+// One admin User owns the Employer; additional members can be added (Phase 4+).
+model Employer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Company identity
+  name        String
+  domain      String  @unique // e.g. "acme.com" — verified via DNS TXT record
+  logoUrl     String?
+  website     String?
+  industry    String?
+  size        String? // "1-10" | "11-50" | "51-200" | "201-500" | "500+"
+
+  // Admin user — the person who registered the employer account
+  adminUserId String
+  adminUser   User    @relation("EmployerAdmin", fields: [adminUserId], references: [id])
+
+  // Status
+  status EmployerStatus @default(PENDING)
+
+  // Domain verification
+  domainVerifications EmployerDomainVerification[]
+
+  // Stripe billing
+  stripeCustomerId     String? @unique
+  stripePlan           EmployerBillingPlan @default(PER_HIRE)
+  stripeSubscriptionId String? @unique // set when on SUBSCRIPTION plan
+  billingEmail         String?
+  trialEndsAt          DateTime? // 14-day trial for new employers
+
+  // Usage tracking (for PER_HIRE plan invoicing)
+  totalHires   Int @default(0)
+  currentMonth Int @default(0) // hire count in current billing month
+
+  @@index([adminUserId])
+  @@map("employers")
+}
+
+// DNS TXT record domain verification challenge.
+// We generate a unique token; employer adds it as a TXT record on their domain;
+// we poll/verify via DNS lookup. One attempt per verification cycle.
+model EmployerDomainVerification {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  verifiedAt DateTime?
+
+  employerId String
+  employer   Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+
+  domain String // mirrors Employer.domain at time of verification
+  token  String @unique // "attesta-verify=<random32hex>" — placed in TXT record
+
+  // Status of this verification attempt
+  verified Boolean @default(false)
+  attempts Int     @default(0) // number of DNS poll attempts made
+  lastAttemptAt DateTime?
+
+  @@index([employerId])
+  @@map("employer_domain_verifications")
+}
+
+// ─────────────────────────────────────────────────────────────
 // ProofWork Profile (Phase 2 — scaffolded here for Phase 1 FK)
 // ─────────────────────────────────────────────────────────────
 
@@ -188,6 +272,10 @@ model Profile {
   // ATTESTA metrics
   completenessScore Int     @default(0) // 0-100, shown during onboarding wizard
   overallTrustScore Decimal @default(0) @db.Decimal(5, 2) // Weighted avg of attestations
+
+  // Phase 3 — DID anchoring
+  did          String? // mirrors User.did, denormalised for profile queries
+  chainTxHash  String? // Polygon tx hash of the DID anchor transaction
 
   // IPFS snapshot for OpenRep portability (Phase 8)
   ipfsCid       String?
