@@ -84,6 +84,10 @@ model User {
   skillAttestations   SkillAttestation[]   @relation("UserSkillAttestations")
   trialsAsCandidate   Trial[]              @relation("CandidateTrials")
   fitScores           StoredFitScore[]     @relation("CandidateFitScores")
+  referralsSent       Referral[]           @relation("ReferrerReferrals")
+  referralsReceived   Referral[]           @relation("CandidateReferrals")
+  trustEdgesFrom      TrustEdge[]          @relation("TrustEdgeFrom")
+  trustEdgesTo        TrustEdge[]          @relation("TrustEdgeTo")
 
   @@map("users")
 }
@@ -677,6 +681,8 @@ model Role {
 
   fitScores    StoredFitScore[]
   hireOutcomes HireOutcome[]
+  referrals    Referral[]
+  bounty       BountyListing?
 
   @@index([employerId])
   @@index([active])
@@ -737,4 +743,106 @@ model HireOutcome {
 
   @@index([roleId])
   @@map("hire_outcomes")
+}
+
+// ─── Phase 11: TrustChain Talent ─────────────────────────────────────────────
+
+// TrustEdge — directed weighted edge in the AI trust graph.
+// Built from verified co-employment histories. GraphSAGE runs over this table.
+model TrustEdge {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  fromUserId String
+  from       User   @relation("TrustEdgeFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId   String
+  to         User   @relation("TrustEdgeTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  strengthScore       Decimal @db.Decimal(4, 3) @default(0.5)
+  coEmploymentMonths  Int     @default(0)
+  sourceType          String  @default("co_employment") // co_employment | endorsement | referral_success
+  evidenceTxHash      String?
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("trust_edges")
+}
+
+enum ReferralStatus {
+  PENDING
+  ACCEPTED
+  HIRED
+  TRANCHE1_RELEASED
+  TRANCHE2_RELEASED
+  TRANCHE3_RELEASED
+  COMPLETED
+  REJECTED
+  EXPIRED
+}
+
+enum BountyStatus {
+  OPEN
+  FILLED
+  CANCELLED
+  EXPIRED
+}
+
+// Referral — one referral from a TrustChain member to a candidate for a role.
+// Smart contract (ReferralEscrow.sol) holds bounty; releases in 3 tranches.
+model Referral {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  referrerId  String
+  referrer    User   @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   User   @relation("CandidateReferrals", fields: [candidateId], references: [id], onDelete: Cascade)
+  roleId      String
+  role        Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  note   String? @db.Text
+  status ReferralStatus @default(PENDING)
+
+  // On-chain escrow
+  contractAddress String?
+  bountyTotalUsd  Int?
+
+  // Tranche timestamps + tx hashes
+  tranche1PaidAt DateTime?
+  tranche2PaidAt DateTime?
+  tranche3PaidAt DateTime?
+  hireTimestamp  DateTime?
+  txHashTranche1 String?
+  txHashTranche2 String?
+  txHashTranche3 String?
+
+  // Anti-collusion score (Isolation Forest output, 0 = clean, 1 = suspicious)
+  antiCollusionScore Decimal? @db.Decimal(4, 3)
+
+  @@index([referrerId])
+  @@index([candidateId])
+  @@index([roleId])
+  @@index([status])
+  @@map("referrals")
+}
+
+// BountyListing — employer-posted open bounty for a role.
+model BountyListing {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employerId    String
+  roleId        String  @unique
+  role          Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  totalBountyUsd Int
+  domain        String @default("CODE")
+  status        BountyStatus @default(OPEN)
+  contractAddress String?
+  expiresAt     DateTime?
+
+  @@index([status])
+  @@map("bounty_listings")
 }

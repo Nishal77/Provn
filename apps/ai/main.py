@@ -12,6 +12,7 @@ from routers import health
 from routers import skill_eval
 from routers import trial_eval
 from routers import rolefit
+from routers import trust_graph
 
 
 class Settings(BaseSettings):
@@ -53,6 +54,7 @@ app.include_router(health.router)
 app.include_router(skill_eval.router)
 app.include_router(trial_eval.router)
 app.include_router(rolefit.router)
+app.include_router(trust_graph.router)
 
 
 if __name__ == "__main__":
