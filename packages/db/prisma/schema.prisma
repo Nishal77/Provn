@@ -846,3 +846,81 @@ model BountyListing {
   @@index([status])
   @@map("bounty_listings")
 }
+
+// ─────────────────────────────────────────────────────────────
+// Phase 12 — University Issuers + OpenRep Issuer Registry
+// ─────────────────────────────────────────────────────────────
+
+enum IssuerStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum IssuedCredentialType {
+  DEGREE
+  CERTIFICATION
+  TRANSCRIPT
+  PROFESSIONAL_LICENSE
+}
+
+// University or institution registered as an OpenRep issuer.
+// First 10 university issuers onboarded in Phase 12.
+model UniversityIssuer {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  did         String @unique // did:polygon:0x… — issuer's on-chain identity
+  name        String
+  domain      String @unique // e.g. "mit.edu"
+  countryCode String // ISO 3166-1 alpha-2
+  logoUrl     String?
+  websiteUrl  String?
+
+  // Hashed API key for credential issuance (never stored plaintext)
+  issuerApiKeyHash String @unique
+
+  status     IssuerStatus @default(PENDING)
+  verifiedAt DateTime?
+
+  credentials IssuedCredential[]
+
+  @@map("university_issuers")
+}
+
+// Credential issued by a university to a professional (non-PII metadata only).
+// Evidence stored on IPFS; chain hash anchored on Polygon.
+model IssuedCredential {
+  id        String   @id @default(cuid())
+  issuedAt  DateTime @default(now())
+
+  issuerId       String
+  issuer         UniversityIssuer @relation(fields: [issuerId], references: [id], onDelete: Cascade)
+
+  profileDid     String // recipient DID
+  credentialType IssuedCredentialType
+  schemaUrl      String  // W3C VC schema URL
+  evidenceCid    String? // IPFS CID of evidence (no PII on Polygon)
+  chainTxHash    String?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+
+  @@index([issuerId])
+  @@index([profileDid])
+  @@map("issued_credentials")
+}
+
+// Government integration stubs (Phase 12 — India DPDP, USPTO, State Bar).
+model GovIntegration {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+
+  type         String // INDIA_DPDP | USPTO | STATE_BAR
+  jurisdiction String // e.g. "IN", "US", "US-CA"
+  apiEndpoint  String?
+  status       String @default("PENDING")
+  lastSyncAt   DateTime?
+
+  @@map("gov_integrations")
+}

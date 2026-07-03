@@ -21,6 +21,8 @@ import { gdprRoutes } from './routes/gdpr/index.js'
 import { trialRoutes } from './routes/trials/index.js'
 import { roleRoutes } from './routes/roles/index.js'
 import { trustChainRoutes } from './routes/trustchain/index.js'
+import { openrepRoutes } from './routes/openrep/index.js'
+import { compliancePlugin } from './middleware/compliance.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -67,6 +69,10 @@ export async function buildApp() {
   await app.register(trialRoutes)
   await app.register(roleRoutes)
   await app.register(trustChainRoutes)
+
+  // Phase 12 — OpenRep public protocol API + compliance hooks
+  await app.register(compliancePlugin)
+  await app.register(openrepRoutes)
 
   return app
 }

@@ -1,0 +1,32 @@
+{
+  "name": "@openrep/sdk",
+  "version": "1.0.0",
+  "description": "OpenRep — open protocol for professional trust. MIT-licensed.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest run"
+  },
+  "keywords": ["openrep", "did", "verifiable-credentials", "professional-trust", "attesta", "polygon"],
+  "repository": { "type": "git", "url": "https://github.com/attesta-io/openrep" },
+  "homepage": "https://openrep.io",
+  "dependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.5.0"
+  }
+}
