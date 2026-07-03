@@ -79,8 +79,9 @@ model User {
   sessions      Session[]
   profile       Profile?
   refreshTokens RefreshToken[]
-  employerAdmin     Employer[]          @relation("EmployerAdmin")
-  employmentRecords EmploymentRecord[]  @relation("CandidateEmploymentRecords")
+  employerAdmin       Employer[]           @relation("EmployerAdmin")
+  employmentRecords   EmploymentRecord[]   @relation("CandidateEmploymentRecords")
+  skillAttestations   SkillAttestation[]   @relation("UserSkillAttestations")
 
   @@map("users")
 }
@@ -363,4 +364,96 @@ model EmploymentRecord {
   @@index([employerId])
   @@index([status])
   @@map("employment_records")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Phase 6 — Skills + AI Eval
+// ─────────────────────────────────────────────────────────────
+
+enum SkillArtifactType {
+  GITHUB_REPO // Full GitHub repo URL
+  GIST        // GitHub Gist URL
+  URL         // Any public URL (blog, demo, deployed project)
+  TEXT        // Inline description / paste
+}
+
+// State machine: PENDING → EVALUATING → SCORED → ANCHORING → ANCHORED
+//                       ↘ FAILED (eval or anchor error)
+enum SkillAttestationStatus {
+  PENDING     // Submitted, queued for AI eval
+  EVALUATING  // AI model currently scoring
+  SCORED      // AI score available; ready to anchor
+  ANCHORING   // Blockchain tx submitted; awaiting confirmation
+  ANCHORED    // On-chain; badge visible on profile
+  FAILED      // Non-retryable error
+}
+
+enum SkillEvalJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+// SkillAttestation — AI-evaluated evidence of a skill.
+// Candidate submits an artifact; CodeLlama/CLIP/Llama3.1 scores it;
+// after scoring the anchor worker writes the result to Polygon.
+model SkillAttestation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User   @relation("UserSkillAttestations", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Skill identity
+  skillSlug  String // e.g. "typescript", "react", "python", "system-design"
+  skillLevel Int?   // 1–10, set by AI after evaluation
+
+  // Artifact submitted for evaluation
+  artifactUrl  String?           // original URL
+  artifactType SkillArtifactType @default(URL)
+
+  // IPFS snapshot of the artifact metadata
+  evidenceCid String? // Pinata IPFS CID
+
+  // AI evaluation results (set by skill-eval worker)
+  aiEvalScore    Decimal? @db.Decimal(5, 2) // 0–100 overall score
+  aiEvalReport   Json?    // full breakdown: categories, reasoning, code_quality, etc.
+  plagiarismScore Decimal? @db.Decimal(4, 3) // 0.0–1.0; >0.8 = likely plagiarised
+
+  // On-chain anchor (set by skill-anchor worker)
+  chainTxHash     String?
+  chainAnchoredAt DateTime?
+
+  status SkillAttestationStatus @default(PENDING)
+
+  evalJob SkillEvalJob?
+
+  @@index([userId])
+  @@index([skillSlug])
+  @@index([status])
+  @@map("skill_attestations")
+}
+
+// SkillEvalJob — tracks the async AI evaluation job for an attestation.
+model SkillEvalJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attestationId String           @unique
+  attestation   SkillAttestation @relation(fields: [attestationId], references: [id], onDelete: Cascade)
+
+  queueJobId String? // BullMQ job ID
+  attempts   Int     @default(0)
+  lastError  String? @db.Text
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  status SkillEvalJobStatus @default(QUEUED)
+
+  @@index([attestationId])
+  @@map("skill_eval_jobs")
 }

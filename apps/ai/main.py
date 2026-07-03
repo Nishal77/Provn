@@ -8,11 +8,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic_settings import BaseSettings
 from routers import health
+from routers import skill_eval
 
 
 class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:4000"
     port: int = 5000
+
+    # Phase 6 — AWS Bedrock (CodeLlama 70B)
+    aws_region: str = "us-east-1"
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    bedrock_model_id: str = "meta.llama3-70b-instruct-v1:0"
+
+    # Internal service auth (shared secret with Node API)
+    internal_api_secret: str = ""
 
     class Config:
         env_file = ".env"
@@ -22,7 +32,7 @@ settings = Settings()
 
 app = FastAPI(
     title="ATTESTA AI Service",
-    version="0.1.0",
+    version="0.2.0",
     description="AI evaluation service for skill attestations and trust scoring",
     docs_url="/docs",
 )
@@ -36,6 +46,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(skill_eval.router)
 
 
 if __name__ == "__main__":

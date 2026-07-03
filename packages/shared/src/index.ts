@@ -9,3 +9,4 @@ export * from './constants/tiers'
 
 // Utils
 export * from './utils/index'
+export * from './types/skill'

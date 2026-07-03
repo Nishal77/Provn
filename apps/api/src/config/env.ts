@@ -45,6 +45,17 @@ const envSchema = z.object({
   // Phase 5 — Resend transactional email (co-sign requests, anchor confirmations)
   RESEND_API_KEY: z.string().optional(), // re_... — get from resend.com dashboard
 
+  // Phase 6 — GitHub OAuth (connect existing accounts for repo analysis)
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+
+  // Phase 6 — AI service + AWS Bedrock (CodeLlama 70B)
+  AI_SERVICE_URL: z.string().url().default('http://localhost:5000'),
+  AWS_REGION: z.string().default('us-east-1'),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  BEDROCK_MODEL_ID: z.string().default('meta.llama3-70b-instruct-v1:0'),
+
   // Phase 4 — Stripe billing
   STRIPE_SECRET_KEY: z.string().optional(),             // sk_test_... or sk_live_...
   // Without this, constructEvent() is skipped — attackers can forge Stripe events (fake payments).
