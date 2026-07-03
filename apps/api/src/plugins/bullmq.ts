@@ -15,6 +15,7 @@ import { createEmploymentAnchorWorker } from '../workers/employment-anchor.worke
 import { createSkillEvalWorker } from '../workers/skill-eval.worker.js'
 import { createSkillAnchorWorker } from '../workers/skill-anchor.worker.js'
 import { createTrialEvalWorker } from '../workers/trial-eval.worker.js'
+import { createRoleExtractWorker } from '../workers/role-extract.worker.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -22,6 +23,7 @@ declare module 'fastify' {
     skillEvalQueue: Queue
     skillAnchorQueue: Queue
     trialEvalQueue: Queue
+    roleExtractQueue: Queue
   }
 }
 
@@ -31,22 +33,25 @@ export const bullmqPlugin = fp(async (app: FastifyInstance) => {
     maxRetriesPerRequest: null,
   })
 
-  const anchorQueue      = new Queue('employment-anchor-queue', { connection })
-  const skillEvalQueue   = new Queue('skill-eval-queue',        { connection })
-  const skillAnchorQueue = new Queue('skill-anchor-queue',      { connection })
-  const trialEvalQueue   = new Queue('trial-eval-queue',        { connection })
+  const anchorQueue       = new Queue('employment-anchor-queue', { connection })
+  const skillEvalQueue    = new Queue('skill-eval-queue',        { connection })
+  const skillAnchorQueue  = new Queue('skill-anchor-queue',      { connection })
+  const trialEvalQueue    = new Queue('trial-eval-queue',        { connection })
+  const roleExtractQueue  = new Queue('role-extract-queue',      { connection })
 
   app.decorate('anchorQueue',      anchorQueue)
   app.decorate('skillEvalQueue',   skillEvalQueue)
   app.decorate('skillAnchorQueue', skillAnchorQueue)
   app.decorate('trialEvalQueue',   trialEvalQueue)
+  app.decorate('roleExtractQueue', roleExtractQueue)
 
   if (process.env.WORKER_DISABLED !== 'true') {
     createEmploymentAnchorWorker({ db: app.db, redis: connection })
     createSkillEvalWorker({ db: app.db, redis: connection, skillEvalQueue, skillAnchorQueue })
     createSkillAnchorWorker({ db: app.db, redis: connection })
     createTrialEvalWorker({ db: app.db, redis: connection })
-    app.log.info('[bullmq] All workers started in-process (anchor + skill + trial)')
+    createRoleExtractWorker({ db: app.db, redis: connection })
+    app.log.info('[bullmq] All workers started in-process (anchor + skill + trial + rolefit)')
   }
 
   app.addHook('onClose', async () => {
@@ -55,6 +60,7 @@ export const bullmqPlugin = fp(async (app: FastifyInstance) => {
       skillEvalQueue.close(),
       skillAnchorQueue.close(),
       trialEvalQueue.close(),
+      roleExtractQueue.close(),
     ])
     await connection.quit()
   })

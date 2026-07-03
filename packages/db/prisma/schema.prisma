@@ -83,6 +83,7 @@ model User {
   employmentRecords   EmploymentRecord[]   @relation("CandidateEmploymentRecords")
   skillAttestations   SkillAttestation[]   @relation("UserSkillAttestations")
   trialsAsCandidate   Trial[]              @relation("CandidateTrials")
+  fitScores           StoredFitScore[]     @relation("CandidateFitScores")
 
   @@map("users")
 }
@@ -624,4 +625,116 @@ model TrialLegal {
   docusignEnvelopeId String?
 
   @@map("trial_legal")
+}
+
+// ─── Phase 10: RoleFit AI ─────────────────────────────────────────────────────
+
+enum RoleDomain {
+  CODE
+  DESIGN
+  WRITING
+  DATA
+  MANAGEMENT
+  SALES
+}
+
+enum RoleExtractionStatus {
+  PENDING
+  EXTRACTING
+  DONE
+  FAILED
+}
+
+// Role — employer-defined position; requirement extraction produces capability vector.
+model Role {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employerId String
+  title      String
+  descriptionText String? @db.Text
+
+  domain             RoleDomain @default(CODE)
+  compensationMinUsd Int?
+  compensationMaxUsd Int?
+  remote             Boolean @default(true)
+  location           String?
+
+  // Requirement extraction sources
+  githubRepoUrl   String?
+  figmaProjectUrl String?
+
+  // Extracted by Python AI service (GitHub + Tree-sitter analysis)
+  extractedRequirements Json?
+  // 2048-dim capability vector (stored for dev-mode cosine similarity; prod uses Pinecone)
+  capabilityVector      Json?
+  pineconeVectorId      String?
+  extractionStatus      RoleExtractionStatus @default(PENDING)
+
+  blindMode Boolean @default(true)
+  active    Boolean @default(true)
+
+  fitScores    StoredFitScore[]
+  hireOutcomes HireOutcome[]
+
+  @@index([employerId])
+  @@index([active])
+  @@map("roles")
+}
+
+// StoredFitScore — cached match result between a role and a candidate.
+// 5 dimensions: Capability 35%, Culture 20%, Growth 20%, Comp 15%, Career 10%
+model StoredFitScore {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  roleId      String
+  role        Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   User   @relation("CandidateFitScores", fields: [candidateId], references: [id], onDelete: Cascade)
+
+  overallScore    Int
+  capabilityScore Int
+  cultureScore    Int
+  growthScore     Int
+  compScore       Int
+  careerScore     Int
+
+  // SHAP-style explainability: top factors + per-dimension breakdown
+  explainability Json
+
+  blindMode         Boolean @default(true)
+  employerInterest  Boolean @default(false)
+  candidateInterest Boolean @default(false)
+  revealedAt        DateTime?
+
+  hireOutcome HireOutcome?
+
+  @@unique([roleId, candidateId])
+  @@index([roleId])
+  @@index([candidateId])
+  @@index([overallScore(sort: Desc)])
+  @@map("stored_fit_scores")
+}
+
+// HireOutcome — recorded after hire decision; feeds PPO RL model retraining.
+model HireOutcome {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  roleId      String
+  role        Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  candidateId String
+
+  hired                Boolean
+  daysToHire           Int?
+  performanceRating90d Decimal? @db.Decimal(3, 2) // 1.0–5.0
+  tenureMonths         Int?
+
+  fitScoreId String?          @unique
+  fitScore   StoredFitScore?  @relation(fields: [fitScoreId], references: [id], onDelete: SetNull)
+
+  @@index([roleId])
+  @@map("hire_outcomes")
 }

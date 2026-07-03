@@ -11,6 +11,7 @@ from pydantic_settings import BaseSettings
 from routers import health
 from routers import skill_eval
 from routers import trial_eval
+from routers import rolefit
 
 
 class Settings(BaseSettings):
@@ -51,6 +52,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(skill_eval.router)
 app.include_router(trial_eval.router)
+app.include_router(rolefit.router)
 
 
 if __name__ == "__main__":

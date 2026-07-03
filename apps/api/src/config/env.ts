@@ -60,6 +60,11 @@ const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   BEDROCK_MODEL_ID: z.string().default('meta.llama3-70b-instruct-v1:0'),
 
+  // Phase 10 — Pinecone vector DB (2048-dim candidate capability vectors)
+  PINECONE_API_KEY: z.string().optional(),
+  PINECONE_ENVIRONMENT: z.string().default('us-east-1-aws'),
+  PINECONE_INDEX: z.string().default('attesta-candidates'),
+
   // Phase 4 — Stripe billing
   STRIPE_SECRET_KEY: z.string().optional(),             // sk_test_... or sk_live_...
   // Without this, constructEvent() is skipped — attackers can forge Stripe events (fake payments).

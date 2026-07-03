@@ -19,6 +19,7 @@ import { zkRoutes } from './routes/zk/index.js'
 import { protocolRoutes } from './routes/protocol/index.js'
 import { gdprRoutes } from './routes/gdpr/index.js'
 import { trialRoutes } from './routes/trials/index.js'
+import { roleRoutes } from './routes/roles/index.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -63,6 +64,7 @@ export async function buildApp() {
   await app.register(protocolRoutes)
   await app.register(gdprRoutes)
   await app.register(trialRoutes)
+  await app.register(roleRoutes)
 
   return app
 }
