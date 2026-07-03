@@ -82,6 +82,7 @@ model User {
   employerAdmin       Employer[]           @relation("EmployerAdmin")
   employmentRecords   EmploymentRecord[]   @relation("CandidateEmploymentRecords")
   skillAttestations   SkillAttestation[]   @relation("UserSkillAttestations")
+  trialsAsCandidate   Trial[]              @relation("CandidateTrials")
 
   @@map("users")
 }
@@ -509,4 +510,118 @@ model ZKDisclosureRequest {
   @@index([requesterId])
   @@index([status])
   @@map("zk_disclosure_requests")
+}
+
+// ─── Phase 9: WorkProof Live ──────────────────────────────────────────────────
+
+enum TrialDomain {
+  CODE
+  DESIGN
+  WRITING
+  DATA
+}
+
+enum TrialStatus {
+  DRAFT
+  INVITED
+  LEGAL_PENDING   // WPTA sent, awaiting candidate signature
+  READY           // signed, sandbox not yet launched
+  IN_PROGRESS     // sandbox live
+  SUBMITTED       // candidate submitted work
+  EVALUATING      // AI eval job running
+  SCORED          // scores recorded
+  CANCELLED
+  EXPIRED
+}
+
+enum TrialScoreDimension {
+  CAPABILITY
+  QUALITY
+  SPEED
+  COMMUNICATION
+  CULTURE
+}
+
+// Trial — one paid real-work session between employer and candidate.
+model Trial {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employerId  String
+  candidateId String
+  candidate   User   @relation("CandidateTrials", fields: [candidateId], references: [id], onDelete: Cascade)
+
+  domain          TrialDomain @default(CODE)
+  roleTitle       String
+  briefMarkdown   String?     @db.Text
+  durationMinutes Int         @default(120)
+
+  compensationCandidateUsd Int @default(100)
+  compensationEmployerUsd  Int @default(300)
+
+  status      TrialStatus @default(DRAFT)
+  invitedAt   DateTime?
+  startedAt   DateTime?
+  submittedAt DateTime?
+  expiresAt   DateTime?
+
+  sandboxContainerId String?
+  sandboxSessionUrl  String?
+  recordingS3Key     String? // AES-256 encrypted at rest
+
+  // Anti-cheat signals
+  keystrokeEntropyScore Decimal? @db.Decimal(5, 3)
+  pasteEventCount       Int      @default(0)
+  antiCheatFlags        Json?
+
+  // Stripe payouts
+  stripePaymentIntentId      String?
+  stripeCandidateTransferId  String?
+  candidatePaidAt            DateTime?
+
+  scores TrialScore[]
+  legal  TrialLegal?
+
+  @@index([candidateId])
+  @@index([employerId])
+  @@index([status])
+  @@map("trials")
+}
+
+// TrialScore — one row per dimension (5 total when complete).
+model TrialScore {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  trialId   String
+  trial     Trial  @relation(fields: [trialId], references: [id], onDelete: Cascade)
+
+  dimension  TrialScoreDimension
+  score      Int               // 0-100
+  percentile Decimal?          @db.Decimal(5, 2)
+  reasoning  String?           @db.Text
+
+  @@unique([trialId, dimension])
+  @@index([trialId])
+  @@map("trial_scores")
+}
+
+// TrialLegal — WPTA agreement record (one per trial).
+model TrialLegal {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  trialId String @unique
+  trial   Trial  @relation(fields: [trialId], references: [id], onDelete: Cascade)
+
+  wptaDocumentCid   String? // IPFS CID of the generated agreement PDF
+  jurisdiction      String  @default("US")
+  employerSignature String?
+  employerSignedAt  DateTime?
+  candidateSignature String?
+  candidateSignedAt  DateTime?
+  docusignEnvelopeId String?
+
+  @@map("trial_legal")
 }
