@@ -45,6 +45,10 @@ const envSchema = z.object({
   // Phase 5 — Resend transactional email (co-sign requests, anchor confirmations)
   RESEND_API_KEY: z.string().optional(), // re_... — get from resend.com dashboard
 
+  // Phase 7 — ZK Verifier contract addresses (set after deploy-verifiers.ts)
+  SALARY_RANGE_VERIFIER_ADDRESS: z.string().optional(),
+  EMPLOYMENT_VERIFIER_ADDRESS: z.string().optional(),
+
   // Phase 6 — GitHub OAuth (connect existing accounts for repo analysis)
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),

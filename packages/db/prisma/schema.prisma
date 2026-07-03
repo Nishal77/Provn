@@ -457,3 +457,56 @@ model SkillEvalJob {
   @@index([attestationId])
   @@map("skill_eval_jobs")
 }
+
+// ─────────────────────────────────────────────────────────────
+// Phase 7 — ZK Disclosure
+// ─────────────────────────────────────────────────────────────
+
+enum ZKClaimType {
+  SALARY_RANGE         // Prove salary ∈ [min, max] (SalaryRangeVerifier.sol)
+  EMPLOYMENT_DURATION  // Prove tenure >= minMonths (EmploymentVerifier.sol)
+}
+
+// State machine: PENDING_PROOF → PROOF_SUBMITTED → VERIFIED
+//                             ↘ DECLINED (candidate refused)
+//                PENDING_PROOF → EXPIRED (7 days no response)
+enum ZKDisclosureStatus {
+  PENDING_PROOF    // Employer requested; waiting for candidate to generate proof
+  PROOF_SUBMITTED  // Candidate generated proof; API verifying on-chain
+  VERIFIED         // On-chain verifyProof() returned true ✓
+  DECLINED         // Candidate explicitly declined the request
+  EXPIRED          // Request expired without response
+  FAILED           // On-chain verification returned false
+}
+
+// ZKDisclosureRequest — employer asks candidate to prove a claim via ZK.
+// Private inputs (actual salary, tenure) NEVER leave the candidate's browser.
+// Only the Groth16 proof + public signals travel over the network.
+model ZKDisclosureRequest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime // 7 days from creation
+
+  // Parties
+  requesterId String // employer user ID who sent the request
+  candidateId String // candidate who must prove the claim
+
+  // Claim being requested
+  claimType   ZKClaimType
+  // SALARY_RANGE:        { "minSalary": 150000, "maxSalary": 250000 }  (USD, whole dollars)
+  // EMPLOYMENT_DURATION: { "minMonths": 12 }
+  claimParams Json
+
+  // Proof submitted by candidate (set after candidate runs SnarkJS in browser)
+  proof        Json?    // { pi_a: [x,y], pi_b: [[x,y],[x,y]], pi_c: [x,y], publicSignals: [...] }
+  proofTxHash  String?  // Polygon tx hash of the on-chain verifyProof() call
+  proofResult  Boolean? // result of on-chain verification
+
+  status ZKDisclosureStatus @default(PENDING_PROOF)
+
+  @@index([candidateId])
+  @@index([requesterId])
+  @@index([status])
+  @@map("zk_disclosure_requests")
+}
