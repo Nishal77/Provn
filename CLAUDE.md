@@ -511,7 +511,7 @@ OpenRep as protocol standard = infrastructure moat. Once ATTESTA defines the sta
 - [x] Phase 5 — Employment Co-Sign (COMPLETE 2026-07-03)
 - [x] Phase 6 — Skills + AI Eval (COMPLETE 2026-07-03)
 - [x] Phase 7 — ZK Disclosure Engine (COMPLETE 2026-07-03)
-- [ ] Phase 8 — Chrome Extension + Dashboard ← MVP
+- [x] Phase 8 — Chrome Extension + Dashboard (COMPLETE 2026-07-03) ← MVP
 - [ ] Phase 9 — WorkProof Live
 - [ ] Phase 10 — RoleFit AI
 - [ ] Phase 11 — TrustChain Talent

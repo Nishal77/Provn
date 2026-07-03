@@ -16,6 +16,8 @@ import { employerRoutes } from './routes/employer/index.js'
 import { employmentRoutes } from './routes/employment/index.js'
 import { skillRoutes } from './routes/skills/index.js'
 import { zkRoutes } from './routes/zk/index.js'
+import { protocolRoutes } from './routes/protocol/index.js'
+import { gdprRoutes } from './routes/gdpr/index.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -57,6 +59,8 @@ export async function buildApp() {
   await app.register(employmentRoutes)
   await app.register(skillRoutes)
   await app.register(zkRoutes)
+  await app.register(protocolRoutes)
+  await app.register(gdprRoutes)
 
   return app
 }

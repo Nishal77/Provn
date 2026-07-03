@@ -1,0 +1,23 @@
+{
+  "name": "@attesta/extension",
+  "version": "0.1.0",
+  "description": "ATTESTA ProofWork Chrome/Firefox extension — LinkedIn badge overlay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@attesta/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "wxt": "^0.19.0",
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.4.5"
+  }
+}
