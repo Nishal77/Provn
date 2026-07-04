@@ -81,11 +81,11 @@ export function createSkillAnchorWorker(deps: { db: PrismaClient; redis: Redis }
 
       const rpcUrl = env.NODE_ENV === 'production'
         ? (env.POLYGON_RPC_URL ?? '')
-        : (env.MUMBAI_RPC_URL ?? env.POLYGON_RPC_URL ?? '')
+        : (env.AMOY_RPC_URL ?? env.POLYGON_RPC_URL ?? '')
 
       const contractAddress = env.NODE_ENV === 'production'
         ? (env.POLYGON_DID_REGISTRY_ADDRESS ?? env.DID_REGISTRY_ADDRESS ?? '')
-        : (env.MUMBAI_DID_REGISTRY_ADDRESS ?? env.DID_REGISTRY_ADDRESS ?? '')
+        : (env.AMOY_DID_REGISTRY_ADDRESS ?? env.DID_REGISTRY_ADDRESS ?? '')
 
       const chain = createBlockchainService({
         rpcUrl,

@@ -34,11 +34,10 @@ const envSchema = z.object({
   POLYGON_RPC_URL: z.string().url().optional(),
   // Polygon Amoy testnet: https://polygon-amoy.g.alchemy.com/v2/<key>
   AMOY_RPC_URL: z.string().url().optional(),
-  MUMBAI_RPC_URL: z.string().url().optional(),
   DEPLOYER_PRIVATE_KEY: z.string().optional(), // 0x-prefixed hex private key
   // Set after deployment (see packages/contracts/README-deploy.md)
   DID_REGISTRY_ADDRESS: z.string().optional(),         // active network address (used at runtime)
-  MUMBAI_DID_REGISTRY_ADDRESS: z.string().optional(),  // testnet — set after deploy:mumbai
+  AMOY_DID_REGISTRY_ADDRESS: z.string().optional(),   // testnet — set after deploy:amoy
   POLYGON_DID_REGISTRY_ADDRESS: z.string().optional(), // mainnet — set after deploy:polygon
   POLYGONSCAN_API_KEY: z.string().optional(),          // for contract source verification
 

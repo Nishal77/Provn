@@ -174,7 +174,7 @@ async function _verifyOnChain(args: {
   const chain = env.NODE_ENV === 'production' ? polygon : polygonMumbai
   const rpcUrl = env.NODE_ENV === 'production'
     ? (env.POLYGON_RPC_URL ?? 'https://polygon-rpc.com')
-    : (env.MUMBAI_RPC_URL ?? 'https://rpc-mumbai.maticvigil.com')
+    : (env.AMOY_RPC_URL ?? 'https://rpc-amoy.polygon.technology')
 
   const publicClient = createPublicClient({ chain, transport: http(rpcUrl) })
 
