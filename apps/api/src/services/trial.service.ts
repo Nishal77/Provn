@@ -170,8 +170,33 @@ export function createTrialService({ db, trialEvalQueue }: Deps) {
     if (!trial) throw Object.assign(new Error('Trial not found'), { statusCode: 404 })
     if (!trial.recordingS3Key) throw Object.assign(new Error('Recording not available'), { statusCode: 404 })
 
-    // In production: generate signed S3 URL (15min TTL)
-    const signedUrl = `https://recordings.attesta.io/${trial.recordingS3Key}?expires=${Date.now() + 900_000}`
+    // Cloudflare R2 pre-signed URL (15min TTL, S3-compatible)
+    const r2AccountId = process.env.R2_ACCOUNT_ID
+    const r2AccessKey = process.env.R2_ACCESS_KEY_ID
+    const r2SecretKey = process.env.R2_SECRET_ACCESS_KEY
+    const r2Bucket = process.env.R2_BUCKET_NAME ?? 'attesta-dev'
+    const r2PublicUrl = process.env.R2_PUBLIC_URL
+
+    if (r2AccountId && r2AccessKey && r2SecretKey) {
+      try {
+        const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3')
+        const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner')
+        const r2 = new S3Client({
+          region: 'auto',
+          endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
+          credentials: { accessKeyId: r2AccessKey, secretAccessKey: r2SecretKey },
+        })
+        const cmd = new GetObjectCommand({ Bucket: r2Bucket, Key: trial.recordingS3Key })
+        const signedUrl = await getSignedUrl(r2, cmd, { expiresIn: 900 })
+        return { signedUrl, expiresInSeconds: 900 }
+      } catch {
+        // fall through to public URL
+      }
+    }
+
+    // Fallback: public R2 URL (if bucket is public) or placeholder
+    const base = r2PublicUrl ?? `https://recordings.attesta.io`
+    const signedUrl = `${base}/${trial.recordingS3Key}`
     return { signedUrl, expiresInSeconds: 900 }
   }
 

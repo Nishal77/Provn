@@ -29,8 +29,11 @@ const envSchema = z.object({
   ONFIDO_API_TOKEN: z.string().optional(),
   ONFIDO_WEBHOOK_SECRET: z.string().optional(),
 
-  // Phase 3 — Polygon blockchain
+  // Phase 3 — Polygon blockchain (use Alchemy: alchemy.com → Create App → Polygon)
+  // Format: https://polygon-mainnet.g.alchemy.com/v2/<key>
   POLYGON_RPC_URL: z.string().url().optional(),
+  // Polygon Amoy testnet: https://polygon-amoy.g.alchemy.com/v2/<key>
+  AMOY_RPC_URL: z.string().url().optional(),
   MUMBAI_RPC_URL: z.string().url().optional(),
   DEPLOYER_PRIVATE_KEY: z.string().optional(), // 0x-prefixed hex private key
   // Set after deployment (see packages/contracts/README-deploy.md)
@@ -53,12 +56,18 @@ const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
 
-  // Phase 6 — AI service + AWS Bedrock (CodeLlama 70B)
+  // Phase 6 — AI service + Groq (Llama 3.1 70B via OpenAI-compatible API)
   AI_SERVICE_URL: z.string().url().default('http://localhost:5000'),
-  AWS_REGION: z.string().default('us-east-1'),
-  AWS_ACCESS_KEY_ID: z.string().optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().optional(),
-  BEDROCK_MODEL_ID: z.string().default('meta.llama3-70b-instruct-v1:0'),
+  GROQ_API_KEY: z.string().optional(),            // console.groq.com
+  ANTHROPIC_API_KEY: z.string().optional(),       // console.anthropic.com (design eval)
+
+  // Phase 9 — Cloudflare R2 (trial recordings + artifacts, S3-compatible, zero egress)
+  // Get at dash.cloudflare.com → R2 → Create bucket
+  R2_ACCOUNT_ID: z.string().optional(),           // Cloudflare account ID
+  R2_ACCESS_KEY_ID: z.string().optional(),        // R2 API token → Access Key ID
+  R2_SECRET_ACCESS_KEY: z.string().optional(),    // R2 API token → Secret Access Key
+  R2_BUCKET_NAME: z.string().default('attesta-dev'),
+  R2_PUBLIC_URL: z.string().optional(),           // optional public bucket URL or custom domain
 
   // Phase 10 — Pinecone vector DB (2048-dim candidate capability vectors)
   PINECONE_API_KEY: z.string().optional(),

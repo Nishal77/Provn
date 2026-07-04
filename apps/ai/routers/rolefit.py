@@ -24,7 +24,6 @@ import json
 import re
 import hashlib
 import math
-import boto3
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional

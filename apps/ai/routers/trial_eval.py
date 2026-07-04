@@ -2,10 +2,10 @@
 Trial eval router — scores submitted trial work across 5 dimensions.
 
 Domains:
-  CODE    → AST analysis + CodeLlama 70B (AWS Bedrock)
-  DESIGN  → Vision LLM via Bedrock Claude (image analysis) or URL-based rubric
-  WRITING → Llama 3.1 70B (AWS Bedrock)
-  DATA    → Mixtral 8x7B via Bedrock (data analysis + query eval)
+  CODE    → Llama 3.1 70B via Groq
+  DESIGN  → Claude Haiku via Anthropic direct (vision capable)
+  WRITING → Llama 3.1 70B via Groq
+  DATA    → Mixtral 8x7B via Groq
 
 Dimensions scored (0-100 each):
   CAPABILITY, QUALITY, SPEED, COMMUNICATION, CULTURE
@@ -13,7 +13,6 @@ Dimensions scored (0-100 each):
 
 import json
 import re
-import boto3
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -50,31 +49,47 @@ class TrialEvalResponse(BaseModel):
     domain: str
 
 
-def _bedrock_client():
-    return boto3.client(
-        "bedrock-runtime",
-        region_name=settings.aws_region,
-        aws_access_key_id=settings.aws_access_key_id,
-        aws_secret_access_key=settings.aws_secret_access_key,
-    )
-
-
-def _invoke_llm(client, model_id: str, prompt: str) -> str:
+def _invoke_groq(prompt: str, model: str | None = None) -> str:
+    """Call Groq (OpenAI-compatible) with Llama 3.1 70B or Mixtral. Returns empty string on error."""
+    api_key = getattr(settings, "groq_api_key", "")
+    if not api_key:
+        return ""
     try:
-        payload = {
-            "prompt": f"\n\nHuman: {prompt}\n\nAssistant:",
-            "max_tokens_to_sample": 1200,
-            "temperature": 0.2,
-        }
-        resp = client.invoke_model(
-            modelId=model_id,
-            body=json.dumps(payload),
-            contentType="application/json",
-            accept="application/json",
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=api_key,
+            base_url=getattr(settings, "groq_base_url", "https://api.groq.com/openai/v1"),
         )
-        body = json.loads(resp["body"].read())
-        return body.get("completion", "")
-    except Exception:
+        used_model = model or getattr(settings, "groq_model_code", "llama-3.1-70b-versatile")
+        resp = client.chat.completions.create(
+            model=used_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=1200,
+        )
+        return resp.choices[0].message.content or ""
+    except Exception as exc:
+        print(f"[trial-eval] Groq error: {exc}")
+        return ""
+
+
+def _invoke_anthropic(prompt: str) -> str:
+    """Call Anthropic Claude Haiku directly for DESIGN domain eval."""
+    api_key = getattr(settings, "anthropic_api_key", "")
+    if not api_key:
+        return ""
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        model = getattr(settings, "anthropic_model", "claude-haiku-4-5-20251001")
+        msg = client.messages.create(
+            model=model,
+            max_tokens=1200,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return msg.content[0].text if msg.content else ""
+    except Exception as exc:
+        print(f"[trial-eval] Anthropic error: {exc}")
         return ""
 
 
@@ -123,21 +138,6 @@ async def eval_trial(req: TrialEvalRequest) -> TrialEvalResponse:
     used_model = "heuristic"
 
     try:
-        client = _bedrock_client()
-        if domain == "CODE":
-            model_id = settings.bedrock_model_id  # CodeLlama 70B
-        elif domain == "DATA":
-            # Mixtral 8x7B for data/analytics evaluation
-            model_id = getattr(settings, "bedrock_data_model_id",
-                               "mistral.mixtral-8x7b-instruct-v0:1")
-        elif domain == "DESIGN":
-            # Claude claude-haiku-4-5 via Bedrock for multi-modal design evaluation
-            model_id = getattr(settings, "bedrock_vision_model_id",
-                               "anthropic.claude-haiku-4-5-20251001-v1:0")
-        else:
-            model_id = getattr(settings, "bedrock_writing_model_id",
-                               "meta.llama3-70b-instruct-v1:0")
-
         domain_context = {
             "CODE": "Evaluate code architecture, correctness, test coverage, and best practices.",
             "DESIGN": "Evaluate visual hierarchy, UI/UX principles, accessibility, and design system adherence.",
@@ -169,11 +169,25 @@ CULTURE: <score>
 
 Base scores on the domain, brief complexity, and anti-cheat signals. Lower scores if entropy < 0.3 or paste > 10."""
 
-        text = _invoke_llm(client, model_id, prompt)
+        if domain == "DESIGN":
+            # Claude Haiku via Anthropic direct — vision-capable model
+            text = _invoke_anthropic(prompt)
+            used_model = getattr(settings, "anthropic_model", "claude-haiku-4-5-20251001")
+        elif domain == "DATA":
+            # Mixtral 8x7B via Groq for data/analytics
+            groq_data_model = getattr(settings, "groq_model_data", "mixtral-8x7b-32768")
+            text = _invoke_groq(prompt, model=groq_data_model)
+            used_model = groq_data_model
+        else:
+            # CODE + WRITING → Llama 3.1 70B via Groq
+            groq_code_model = getattr(settings, "groq_model_code", "llama-3.1-70b-versatile")
+            text = _invoke_groq(prompt, model=groq_code_model)
+            used_model = groq_code_model
+
         raw_scores = _parse_scores(text) if text else _heuristic_scores(req.anti_cheat)
-        used_model = model_id
     except Exception:
         raw_scores = _heuristic_scores(req.anti_cheat)
+        used_model = "heuristic"
 
     dimensions: dict[str, DimensionScore] = {}
     for dim, (score, reasoning) in raw_scores.items():

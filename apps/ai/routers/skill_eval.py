@@ -1,6 +1,6 @@
 """
 Phase 6 — Skill evaluation router.
-Evaluates code/text artifacts via CodeLlama 70B (AWS Bedrock).
+Evaluates code/text artifacts via Llama 3.1 70B (Groq).
 Includes plagiarism detection via SimHash.
 """
 
@@ -135,17 +135,17 @@ async def _fetch_artifact(artifact_url: str, artifact_type: str) -> str:
             return f"URL: {artifact_url} (fetch failed: {r.status_code})"
 
 
-# ── Bedrock CodeLlama eval ────────────────────────────────────────────────────
+# ── Groq (Llama 3.1 70B) eval ────────────────────────────────────────────────
 
-async def _eval_via_bedrock(
+async def _eval_via_groq(
     skill_slug: str,
     artifact_content: str,
     description: str | None,
     settings: Any,
 ) -> dict[str, Any]:
     """
-    Call AWS Bedrock (CodeLlama 70B) for skill evaluation.
-    Falls back to heuristic scoring when Bedrock is unconfigured (dev mode).
+    Call Groq (Llama 3.1 70B) for skill evaluation via OpenAI-compatible API.
+    Falls back to heuristic scoring when GROQ_API_KEY is not set (dev mode).
     """
     prompt = f"""You are an expert senior software engineer evaluating a candidate's skill artifact for the skill: **{skill_slug}**.
 
@@ -170,39 +170,30 @@ Evaluate the artifact and return a JSON object with this exact structure:
 
 Return ONLY the JSON object. No markdown fences, no explanation outside the JSON."""
 
-    # Check Bedrock config
-    aws_region = getattr(settings, "aws_region", None)
-    aws_access_key = getattr(settings, "aws_access_key_id", None)
-    aws_secret_key = getattr(settings, "aws_secret_access_key", None)
-
-    if aws_access_key and aws_secret_key and aws_region:
+    groq_api_key = getattr(settings, "groq_api_key", "")
+    if groq_api_key:
         try:
-            import boto3  # type: ignore
+            from openai import OpenAI  # groq is OpenAI-compatible
 
-            client = boto3.client(
-                "bedrock-runtime",
-                region_name=aws_region,
-                aws_access_key_id=aws_access_key,
-                aws_secret_access_key=aws_secret_key,
+            client = OpenAI(
+                api_key=groq_api_key,
+                base_url=getattr(settings, "groq_base_url", "https://api.groq.com/openai/v1"),
             )
-            body = json.dumps({
-                "prompt": prompt,
-                "max_gen_len": 1024,
-                "temperature": 0.1,
-                "top_p": 0.9,
-            })
-            model_id = getattr(settings, "bedrock_model_id", "meta.llama3-70b-instruct-v1:0")
-            response = client.invoke_model(modelId=model_id, body=body)
-            result_body = json.loads(response["body"].read())
-            raw = result_body.get("generation") or result_body.get("outputs", [{}])[0].get("text", "")
+            model = getattr(settings, "groq_model_code", "llama-3.1-70b-versatile")
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=1024,
+            )
+            raw = resp.choices[0].message.content or ""
             # Strip markdown fences if present
             raw = re.sub(r"```(?:json)?\n?", "", raw).strip()
             return json.loads(raw)
         except Exception as exc:
-            # Log and fall through to heuristic
-            print(f"[skill-eval] Bedrock error: {exc} — using heuristic fallback")
+            print(f"[skill-eval] Groq error: {exc} — using heuristic fallback")
 
-    # ── Heuristic fallback (dev / no Bedrock) ────────────────────────────────
+    # ── Heuristic fallback (dev / no API key) ────────────────────────────────
     tokens = re.findall(r"\w+", artifact_content.lower())
     length_score = min(100.0, len(tokens) / 5.0)
     keyword_hits = sum(1 for t in tokens if t in (
@@ -222,7 +213,7 @@ Return ONLY the JSON object. No markdown fences, no explanation outside the JSON
             "readability": overall * 0.95,
             "correctness": overall * 0.85,
         },
-        "reasoning": f"Heuristic evaluation (Bedrock not configured). Artifact has {len(tokens)} tokens with {keyword_hits} relevant keywords.",
+        "reasoning": f"Heuristic evaluation (GROQ_API_KEY not set). Artifact has {len(tokens)} tokens with {keyword_hits} relevant keywords.",
     }
 
 
@@ -257,7 +248,7 @@ async def evaluate_skill(payload: SkillEvalRequest) -> SkillEvalResponse:
 
     # ── 3. AI evaluation ─────────────────────────────────────────────────────
     try:
-        eval_result = await _eval_via_bedrock(
+        eval_result = await _eval_via_groq(
             skill_slug=payload.skill_slug,
             artifact_content=artifact_content,
             description=payload.description,
@@ -269,7 +260,8 @@ async def evaluate_skill(payload: SkillEvalRequest) -> SkillEvalResponse:
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {exc}") from exc
 
     elapsed_ms = int((time.time() - start) * 1000)
-    model_used = getattr(settings, "bedrock_model_id", "heuristic-fallback")
+    groq_key = getattr(settings, "groq_api_key", "")
+    model_used = getattr(settings, "groq_model_code", "llama-3.1-70b-versatile") if groq_key else "heuristic-fallback"
 
     return SkillEvalResponse(
         attestation_id=payload.attestation_id,

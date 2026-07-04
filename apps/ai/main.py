@@ -19,18 +19,19 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:4000"
     port: int = 5000
 
-    # Phase 6/9 — AWS Bedrock model IDs
-    aws_region: str = "us-east-1"
-    aws_access_key_id: str = ""
-    aws_secret_access_key: str = ""
-    # Code eval: CodeLlama 70B / Llama 3.1 70B
-    bedrock_model_id: str = "meta.llama3-70b-instruct-v1:0"
-    # Writing eval: Llama 3.1 70B (separate ID for independent tuning)
-    bedrock_writing_model_id: str = "meta.llama3-70b-instruct-v1:0"
-    # Data eval: Mixtral 8x7B
-    bedrock_data_model_id: str = "mistral.mixtral-8x7b-instruct-v0:1"
-    # Design eval: Claude claude-haiku-4-5 (vision capable)
-    bedrock_vision_model_id: str = "anthropic.claude-haiku-4-5-20251001-v1:0"
+    # Phase 6/9 — Groq (OpenAI-compatible, Llama 3.1 70B + Mixtral)
+    # Get key at https://console.groq.com
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    # Code + Writing eval: Llama 3.1 70B via Groq
+    groq_model_code: str = "llama-3.1-70b-versatile"
+    # Data eval: Mixtral 8x7B via Groq
+    groq_model_data: str = "mixtral-8x7b-32768"
+
+    # Phase 6/9 — Anthropic direct (Claude Haiku for design eval)
+    # Get key at https://console.anthropic.com
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-haiku-4-5-20251001"
 
     # Phase 10 — Pinecone vector DB (2048-dim candidate + role vectors)
     pinecone_api_key: str = ""
