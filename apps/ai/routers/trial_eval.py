@@ -3,9 +3,9 @@ Trial eval router — scores submitted trial work across 5 dimensions.
 
 Domains:
   CODE    → AST analysis + CodeLlama 70B (AWS Bedrock)
-  DESIGN  → heuristic rubric (CLIP integration stub)
+  DESIGN  → Vision LLM via Bedrock Claude (image analysis) or URL-based rubric
   WRITING → Llama 3.1 70B (AWS Bedrock)
-  DATA    → heuristic rubric
+  DATA    → Mixtral 8x7B via Bedrock (data analysis + query eval)
 
 Dimensions scored (0-100 each):
   CAPABILITY, QUALITY, SPEED, COMMUNICATION, CULTURE
@@ -126,8 +126,24 @@ async def eval_trial(req: TrialEvalRequest) -> TrialEvalResponse:
         client = _bedrock_client()
         if domain == "CODE":
             model_id = settings.bedrock_model_id  # CodeLlama 70B
+        elif domain == "DATA":
+            # Mixtral 8x7B for data/analytics evaluation
+            model_id = getattr(settings, "bedrock_data_model_id",
+                               "mistral.mixtral-8x7b-instruct-v0:1")
+        elif domain == "DESIGN":
+            # Claude claude-haiku-4-5 via Bedrock for multi-modal design evaluation
+            model_id = getattr(settings, "bedrock_vision_model_id",
+                               "anthropic.claude-haiku-4-5-20251001-v1:0")
         else:
-            model_id = getattr(settings, "bedrock_writing_model_id", settings.bedrock_model_id)
+            model_id = getattr(settings, "bedrock_writing_model_id",
+                               "meta.llama3-70b-instruct-v1:0")
+
+        domain_context = {
+            "CODE": "Evaluate code architecture, correctness, test coverage, and best practices.",
+            "DESIGN": "Evaluate visual hierarchy, UI/UX principles, accessibility, and design system adherence.",
+            "WRITING": "Evaluate clarity, structure, persuasion, grammar, and audience appropriateness.",
+            "DATA": "Evaluate query correctness, statistical methodology, insight quality, and visualization choices.",
+        }.get(domain, "Evaluate the submission holistically.")
 
         prompt = f"""You are an expert evaluator for a professional real-work trial.
 
@@ -136,6 +152,8 @@ Domain: {domain}
 Duration: {req.duration_minutes} minutes
 Brief: {req.brief_markdown[:500] if req.brief_markdown else 'N/A'}
 Anti-cheat signals: keystroke entropy={req.anti_cheat.entropy_score:.2f}, paste events={req.anti_cheat.paste_count}
+
+Evaluation focus: {domain_context}
 
 Score the candidate on FIVE dimensions (0-100 each). Return EXACTLY this format:
 CAPABILITY: <score>

@@ -75,6 +75,25 @@ export function createTrialEvalWorker({ db, redis }: WorkerDeps) {
           })
         })
 
+        // Stripe Connect payout — transfer candidate fee if Stripe configured and not cheating
+        if (!cheating && process.env.STRIPE_SECRET_KEY && trial.candidatePayoutAmountUsd) {
+          try {
+            const stripe = await import('stripe').then(m => new m.default(process.env.STRIPE_SECRET_KEY!))
+            const candidate = await db.user.findUnique({ where: { id: trial.candidateId }, select: { stripeAccountId: true } })
+            if (candidate?.stripeAccountId) {
+              await stripe.transfers.create({
+                amount: Math.round(trial.candidatePayoutAmountUsd * 100), // cents
+                currency: 'usd',
+                destination: candidate.stripeAccountId,
+                metadata: { trialId, candidateId: trial.candidateId },
+              })
+              job.log(`Payout $${trial.candidatePayoutAmountUsd} → candidate ${trial.candidateId}`)
+            }
+          } catch (payoutErr) {
+            job.log(`Payout failed (non-fatal): ${payoutErr}`)
+          }
+        }
+
         job.log(`Trial ${trialId} scored. Cheating flag: ${cheating}`)
       } catch (err) {
         await db.trial.update({ where: { id: trialId }, data: { status: 'SUBMITTED' } }) // revert so retry can re-evaluate

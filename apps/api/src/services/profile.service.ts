@@ -28,9 +28,10 @@ export const profileService = {
       include: { profile: true },
     })
 
-    // First-time access: create profile + assign Phase 2 DID
+    // First-time access: create profile + assign DID
+    // Use did:polygon if wallet address present (Phase 3+), else did:attesta (Phase 2 temp)
     if (!user.profile) {
-      const did = didService.generateFromUserId(userId)
+      const did = didService.resolveForUser(userId, (user as any).polygonAddress)
       const [profile] = await db.$transaction([
         db.profile.create({
           data: { userId, completenessScore: 0 },
@@ -41,6 +42,16 @@ export const profileService = {
         }),
       ])
       return { user: { ...user, did, profile }, profile }
+    }
+
+    // Upgrade existing did:attesta → did:polygon if wallet was added after initial signup
+    if (
+      user.did?.startsWith('did:attesta:') &&
+      (user as any).polygonAddress
+    ) {
+      const newDid = didService.generateFromWallet((user as any).polygonAddress)
+      await db.user.update({ where: { id: userId }, data: { did: newDid } })
+      return { user: { ...user, did: newDid }, profile: user.profile }
     }
 
     return { user, profile: user.profile }

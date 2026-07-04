@@ -1,7 +1,7 @@
 """
 ATTESTA AI Service — FastAPI
 Phase 1: Scaffold only (health endpoint).
-Phase 6: Skill evaluation endpoints (CodeLlama, CLIP, Llama 3.1).
+Phase 6: Skill evaluation endpoints (CodeLlama, Llama 3.1, Mixtral for data, Claude for design).
 Phase 9: Trial evaluation endpoint (WorkProof Live scoring).
 """
 
@@ -19,12 +19,28 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:4000"
     port: int = 5000
 
-    # Phase 6/9 — AWS Bedrock
+    # Phase 6/9 — AWS Bedrock model IDs
     aws_region: str = "us-east-1"
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
+    # Code eval: CodeLlama 70B / Llama 3.1 70B
     bedrock_model_id: str = "meta.llama3-70b-instruct-v1:0"
+    # Writing eval: Llama 3.1 70B (separate ID for independent tuning)
     bedrock_writing_model_id: str = "meta.llama3-70b-instruct-v1:0"
+    # Data eval: Mixtral 8x7B
+    bedrock_data_model_id: str = "mistral.mixtral-8x7b-instruct-v0:1"
+    # Design eval: Claude claude-haiku-4-5 (vision capable)
+    bedrock_vision_model_id: str = "anthropic.claude-haiku-4-5-20251001-v1:0"
+
+    # Phase 10 — Pinecone vector DB (2048-dim candidate + role vectors)
+    pinecone_api_key: str = ""
+    pinecone_environment: str = "us-east1-gcp"
+    pinecone_index: str = "attesta-rolefit"
+
+    # Phase 11 — Neo4j trust graph
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = "attesta_dev"
 
     # Internal service auth (shared secret with Node API)
     internal_api_secret: str = ""

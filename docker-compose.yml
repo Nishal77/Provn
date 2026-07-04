@@ -1,13 +1,16 @@
 version: '3.9'
 
 # ATTESTA local development infrastructure.
-# Provides PostgreSQL 16 and Redis 7.
+# Provides PostgreSQL 16, Redis 7, Neo4j, and Elasticsearch.
 # The apps themselves run via pnpm dev (hot-reload), not in Docker.
 #
 # Usage:
-#   docker compose up -d          Start DB + Redis
+#   docker compose up -d          Start all services
 #   docker compose down           Stop and remove containers
 #   docker compose down -v        Also remove volumes (DESTROYS DATA)
+#
+# Minimal startup (no graph/search):
+#   docker compose up -d postgres redis
 
 services:
   postgres:
@@ -43,8 +46,53 @@ services:
       timeout: 5s
       retries: 5
 
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: attesta-neo4j
+    restart: unless-stopped
+    ports:
+      - '7474:7474'  # Browser UI
+      - '7687:7687'  # Bolt protocol
+    environment:
+      NEO4J_AUTH: neo4j/attesta_dev
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_max__size: 512m
+      NEO4J_dbms_memory_pagecache_size: 256m
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:7474']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  elasticsearch:
+    image: elasticsearch:8.12.0
+    container_name: attesta-elasticsearch
+    restart: unless-stopped
+    ports:
+      - '9200:9200'
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: 'false'
+      ES_JAVA_OPTS: '-Xms256m -Xmx512m'
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -s http://localhost:9200/_cluster/health | grep -q "green\|yellow"']
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  es_data:
     driver: local

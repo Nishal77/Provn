@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Script from 'next/script'
 import type { ZKDisclosureRequest, SalaryRangeParams, EmploymentDurationParams } from '@attesta/shared'
 import { formatClaimLabel } from '@attesta/shared'
 
@@ -14,10 +15,11 @@ type PageState = 'loading' | 'form' | 'proving' | 'submitting' | 'done' | 'error
 export default function ProvePage() {
   const { id } = useParams() as { id: string }
   const router = useRouter()
+  const [snarkjsReady, setSnarkjsReady] = useState(false)
   const [state, setState] = useState<PageState>('loading')
   const [request, setRequest] = useState<ZKDisclosureRequest | null>(null)
   const [privateValue, setPrivateValue] = useState('')
-  const [privateValue2, setPrivateValue2] = useState('') // for salary: max of their actual range
+  const [_privateValue2, _setPrivateValue2] = useState('') // reserved: salary max field (future)
   const [error, setError] = useState<string | null>(null)
   const [verified, setVerified] = useState(false)
 
@@ -94,7 +96,16 @@ export default function ProvePage() {
   // ── States ─────────────────────────────────────────────────────────────
 
   if (state === 'loading') {
-    return <Shell><p className="text-gray-400 animate-pulse">Loading request…</p></Shell>
+    return (
+      <>
+        <Script
+          src="https://cdn.jsdelivr.net/npm/snarkjs@0.7.4/build/snarkjs.min.js"
+          strategy="afterInteractive"
+          onLoad={() => setSnarkjsReady(true)}
+        />
+        <Shell><p className="text-gray-400 animate-pulse">Loading request…</p></Shell>
+      </>
+    )
   }
 
   if (state === 'error' || !request) {
@@ -155,10 +166,17 @@ export default function ProvePage() {
 
   // ── Form state ─────────────────────────────────────────────────────────
   const issalary = request.claimType === 'SALARY_RANGE'
+  const snarkNotReady = !snarkjsReady
   const params = request.claimParams
   const claimLabel = formatClaimLabel(request.claimType, params)
 
   return (
+    <>
+      <Script
+        src="https://cdn.jsdelivr.net/npm/snarkjs@0.7.4/build/snarkjs.min.js"
+        strategy="afterInteractive"
+        onLoad={() => setSnarkjsReady(true)}
+      />
     <Shell>
       <div className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-3">
         Zero-Knowledge Proof
@@ -220,10 +238,11 @@ export default function ProvePage() {
         <div className="flex gap-3 pt-1">
           <button
             type="submit"
+            disabled={snarkNotReady}
             className="flex-1 py-2.5 px-4 bg-indigo-600 text-white text-sm font-semibold
-                       rounded-lg hover:bg-indigo-700 transition-colors"
+                       rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
           >
-            Generate &amp; submit proof
+            {snarkNotReady ? 'Loading ZK library…' : 'Generate & submit proof'}
           </button>
           <button
             type="button"
@@ -236,6 +255,7 @@ export default function ProvePage() {
         </div>
       </form>
     </Shell>
+    </>
   )
 }
 

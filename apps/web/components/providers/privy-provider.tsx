@@ -36,7 +36,7 @@ export function PrivyProviderClient({ children }: Props) {
           theme: 'light',
           accentColor: '#3B82F6',
         },
-        loginMethods: ['wallet'],
+        loginMethods: ['email', 'google', 'github', 'wallet'],
       }}
     >
       {children}

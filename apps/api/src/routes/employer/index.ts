@@ -4,6 +4,7 @@ import { employerVerifyDomainRoute } from './verify-domain.js'
 import { employerMeRoute } from './me.js'
 import { employerBillingRoutes } from './billing.js'
 import { employerCandidatesRoute } from './candidates.js'
+import { hrisWebhookRoutes } from './hris-webhook.js'
 
 export async function employerRoutes(app: FastifyInstance) {
   await employerRegisterRoute(app)
@@ -11,4 +12,5 @@ export async function employerRoutes(app: FastifyInstance) {
   await employerMeRoute(app)
   await employerBillingRoutes(app)
   await employerCandidatesRoute(app)
+  await hrisWebhookRoutes(app)
 }

@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import type { Queue } from 'bullmq'
 import { createId } from '@paralleldrive/cuid2'
+import { env } from '../config/env.js'
 
 interface Deps {
   db: PrismaClient
@@ -76,11 +77,34 @@ export function createTrialService({ db, trialEvalQueue }: Deps) {
     if (trial.status !== 'READY') throw Object.assign(new Error('Not ready to launch'), { statusCode: 409 })
     if (!trial.legal?.candidateSignature) throw Object.assign(new Error('WPTA not signed'), { statusCode: 409 })
 
-    // In production: call Kubernetes Jobs API to spin up Firecracker microVM / Judge0 sandbox.
-    // Return a time-limited signed session URL.
-    // Dev: return a stub URL.
+    // Spin up sandbox via Judge0 if configured, otherwise return dev stub URL
     const sandboxContainerId = `sandbox-${trialId}`
-    const sandboxSessionUrl = `https://sandbox.attesta.io/session/${trialId}?token=stub`
+    let sandboxSessionUrl = `https://sandbox.attesta.io/session/${trialId}?token=stub-dev`
+
+    if (env.JUDGE0_URL) {
+      try {
+        const resp = await fetch(`${env.JUDGE0_URL}/sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(env.JUDGE0_AUTH_TOKEN ? { 'X-Auth-Token': env.JUDGE0_AUTH_TOKEN } : {}),
+          },
+          body: JSON.stringify({
+            trial_id: trialId,
+            domain: trial.domain,
+            duration_minutes: trial.durationMinutes,
+            container_id: sandboxContainerId,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        })
+        if (resp.ok) {
+          const data = await resp.json() as { session_url?: string }
+          if (data.session_url) sandboxSessionUrl = data.session_url
+        }
+      } catch {
+        // non-fatal — fall back to stub URL
+      }
+    }
     const expiresAt = new Date(Date.now() + trial.durationMinutes * 60 * 1000)
 
     return db.trial.update({

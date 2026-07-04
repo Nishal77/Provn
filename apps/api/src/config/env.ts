@@ -65,6 +65,13 @@ const envSchema = z.object({
   PINECONE_ENVIRONMENT: z.string().default('us-east-1-aws'),
   PINECONE_INDEX: z.string().default('attesta-candidates'),
 
+  // Phase 9 — Judge0 sandbox (self-hosted)
+  JUDGE0_URL: z.string().url().optional(),              // e.g. https://judge0.attesta.io
+  JUDGE0_AUTH_TOKEN: z.string().optional(),             // X-Auth-Token header
+
+  // Phase 9 — Stripe Connect (candidate payouts)
+  STRIPE_CONNECT_CLIENT_ID: z.string().optional(),      // ca_... from Stripe Dashboard
+
   // Phase 4 — Stripe billing
   STRIPE_SECRET_KEY: z.string().optional(),             // sk_test_... or sk_live_...
   // Without this, constructEvent() is skipped — attackers can forge Stripe events (fake payments).

@@ -71,6 +71,9 @@ model User {
   onfidoApplicantId String? // Onfido applicant record ID (no PII stored here)
   onfidoCheckId     String? // Onfido check ID, used to reconcile webhook events
 
+  // Phase 9 — Stripe Connect (candidate payouts)
+  stripeAccountId String? // Stripe Connect express account ID (acct_...)
+
   // Display info
   name     String?
   imageUrl String?
@@ -228,6 +231,11 @@ model Employer {
   // Usage tracking (for PER_HIRE plan invoicing)
   totalHires   Int @default(0)
   currentMonth Int @default(0) // hire count in current billing month
+
+  // HRIS integration (Phase 4+ — Workday / BambooHR webhook)
+  hrisConnected Boolean @default(false)
+  hrisProvider  String? // "workday" | "bamboohr"
+  hrisSecret    String? // HMAC shared secret for webhook signature verification (encrypted at rest)
 
   employmentRecords EmploymentRecord[] @relation("EmployerEmploymentRecords")
 
@@ -434,12 +442,39 @@ model SkillAttestation {
 
   status SkillAttestationStatus @default(PENDING)
 
-  evalJob SkillEvalJob?
+  // Peer co-attestation (Phase 6)
+  evidenceType  String  @default("SELF")  // "SELF" | "PEER" | "AI"
+  peerCoSigned  Boolean @default(false)
+
+  evalJob              SkillEvalJob?
+  peerAttestationReqs  PeerAttestationRequest[]
 
   @@index([userId])
   @@index([skillSlug])
   @@index([status])
   @@map("skill_attestations")
+}
+
+// PeerAttestationRequest — one-time token sent to a co-worker for peer co-signing.
+model PeerAttestationRequest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  attestationId String
+  attestation   SkillAttestation @relation(fields: [attestationId], references: [id], onDelete: Cascade)
+
+  peerEmail    String
+  relationship String // e.g. "colleague", "manager", "report"
+  token        String   @unique
+  expiresAt    DateTime
+
+  verdict  String?  // "CONFIRM" | "DECLINE" — set when peer responds
+  comment  String?  @db.Text
+  usedAt   DateTime?
+
+  @@index([attestationId])
+  @@index([token])
+  @@map("peer_attestation_requests")
 }
 
 // SkillEvalJob — tracks the async AI evaluation job for an attestation.
@@ -583,6 +618,7 @@ model Trial {
   // Stripe payouts
   stripePaymentIntentId      String?
   stripeCandidateTransferId  String?
+  candidatePayoutAmountUsd   Decimal? @db.Decimal(8, 2) // $50–$200
   candidatePaidAt            DateTime?
 
   scores TrialScore[]

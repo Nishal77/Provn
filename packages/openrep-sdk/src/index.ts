@@ -79,6 +79,39 @@ export interface Issuer {
   activeCredentials: number
 }
 
+export interface TrustPath {
+  found: boolean
+  path: string[]   // ordered list of DIDs from source → target
+  hopCount: number
+  trustScore: number
+}
+
+export interface WebhookSubscription {
+  subscriptionId: string
+  did: string
+  callbackUrl: string
+  events: CredentialEvent[]
+  createdAt: string
+}
+
+export type CredentialEvent =
+  | 'CREDENTIAL_ISSUED'
+  | 'CREDENTIAL_REVOKED'
+  | 'KYC_TIER_CHANGED'
+  | 'TRUST_SCORE_CHANGED'
+
+export interface CompensationIntel {
+  role: string
+  level: string
+  geography: string
+  p25Usd: number
+  p50Usd: number
+  p75Usd: number
+  p90Usd: number
+  sampleSize: number
+  updatedAt: string
+}
+
 export type ZKClaimType = 'SALARY_RANGE' | 'EMPLOYMENT_DURATION'
 
 export interface ZKProofBundle {
@@ -180,6 +213,46 @@ export class OpenRep {
     return this._get(`/protocol/linkedin/${encodeURIComponent(username)}`)
   }
 
+  /** Resolve multiple DIDs in parallel (max 100 per call). */
+  async batchResolve(dids: string[]): Promise<DIDDocument[]> {
+    if (dids.length > 100) throw new Error('batchResolve: max 100 DIDs per call')
+    return Promise.all(dids.map(did => this.resolveDID(did)))
+  }
+
+  /**
+   * Find the shortest trust path between two DIDs via the TrustChain protocol.
+   * Returns path as ordered array of user IDs (not DIDs) with trust score.
+   */
+  async getTrustPath(fromDid: string, toDid: string, maxHops = 3): Promise<TrustPath> {
+    return this._post('/protocol/trust/path', { fromDid, toDid, maxHops })
+  }
+
+  /**
+   * Register a webhook to receive credential events for a DID.
+   * Requires a valid issuer API key.
+   */
+  async subscribeWebhook(
+    did: string,
+    callbackUrl: string,
+    events: CredentialEvent[],
+    issuerApiKey: string,
+  ): Promise<WebhookSubscription> {
+    return this._post('/protocol/webhooks', { did, callbackUrl, events }, issuerApiKey)
+  }
+
+  /** Query anonymized compensation intelligence for a role/level/geography. */
+  async getCompensationIntel(params: {
+    role?: string
+    level?: 'junior' | 'mid' | 'senior' | 'staff'
+    geography?: string
+  }): Promise<CompensationIntel> {
+    const qs = new URLSearchParams()
+    if (params.role) qs.set('role', params.role)
+    if (params.level) qs.set('level', params.level)
+    if (params.geography) qs.set('geography', params.geography)
+    return this._get(`/market/compensation?${qs.toString()}`)
+  }
+
   // ─── Internal ─────────────────────────────────────────────────────────────
 
   private async _get<T>(path: string): Promise<T> {
@@ -212,6 +285,53 @@ export class OpenRep {
     }
     return res.json() as Promise<T>
   }
+}
+
+// ─── Utility helpers ─────────────────────────────────────────────────────────
+
+/** Convert an Ethereum/Polygon wallet address to a did:polygon DID. */
+export function walletToDID(address: string): string {
+  const normalized = address.toLowerCase().startsWith('0x')
+    ? address.toLowerCase()
+    : `0x${address.toLowerCase()}`
+  return `did:polygon:${normalized}`
+}
+
+/** Extract the wallet address from a did:polygon DID, or null for other methods. */
+export function didToWallet(did: string): string | null {
+  const m = did.match(/^did:polygon:(0x[a-f0-9]{40})$/i)
+  return m ? m[1].toLowerCase() : null
+}
+
+/** Check whether a string is a valid did:polygon DID. */
+export function isPolygonDID(did: string): boolean {
+  return /^did:polygon:0x[a-f0-9]{40}$/i.test(did)
+}
+
+/** Parse a KYC tier enum value into a human-readable label. */
+export function kycTierLabel(tier: string): string {
+  const labels: Record<string, string> = {
+    T1_GOVT: 'Government Verified',
+    T2_EMPLOYER: 'Employer Verified',
+    T3_INSTITUTION: 'Institution Verified',
+    T4_PEER: 'Peer Verified',
+    T5_AI_INFERRED: 'AI Inferred',
+    T6_SELF: 'Self Attested',
+  }
+  return labels[tier] ?? tier
+}
+
+/** Compute the numerical trust weight for a KYC tier (matches PRD). */
+export function kycTierScore(tier: string): number {
+  const scores: Record<string, number> = {
+    T1_GOVT: 10,
+    T2_EMPLOYER: 9,
+    T3_INSTITUTION: 8,
+    T4_PEER: 6,
+    T5_AI_INFERRED: 5,
+    T6_SELF: 1,
+  }
+  return scores[tier] ?? 0
 }
 
 // Re-export types

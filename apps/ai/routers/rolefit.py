@@ -32,6 +32,33 @@ from ..main import settings  # type: ignore[import]
 
 router = APIRouter()
 
+
+# ─── Pinecone client ─────────────────────────────────────────────────────────
+
+def _pinecone_index():
+    """Return live Pinecone Index if API key configured, else None."""
+    if not settings.pinecone_api_key:
+        return None
+    try:
+        from pinecone import Pinecone  # type: ignore[import]
+        pc = Pinecone(api_key=settings.pinecone_api_key)
+        return pc.Index(settings.pinecone_index)
+    except Exception:
+        return None
+
+
+class CandidateVectorRequest(BaseModel):
+    candidate_id: str
+    skills: list[str]
+    kyc_tier: str = "T6_SELF"
+    trust_score: float = 0.5
+
+
+class CandidateVectorResponse(BaseModel):
+    candidate_id: str
+    pinecone_vector_id: str
+    upserted: bool
+
 # ─── Models ──────────────────────────────────────────────────────────────────
 
 class RequirementsRequest(BaseModel):
@@ -234,11 +261,29 @@ async def extract_requirements(req: RequirementsRequest) -> RequirementsResponse
     vector_seed = req.role_id + req.domain + "".join(analysis["languages"])
     vector = _deterministic_vector(vector_seed, dim=2048)
 
+    # Upsert role vector to Pinecone
+    pinecone_id = f"role-{req.role_id}"
+    idx = _pinecone_index()
+    if idx is not None:
+        try:
+            idx.upsert(vectors=[{
+                "id": pinecone_id,
+                "values": vector,
+                "metadata": {
+                    "type": "role",
+                    "role_id": req.role_id,
+                    "domain": req.domain,
+                    "languages": analysis.get("languages", []),
+                },
+            }])
+        except Exception:
+            pass  # non-fatal; falls back to heuristic matching in dev
+
     return RequirementsResponse(
         role_id=req.role_id,
         extracted_requirements=extracted,
         capability_vector=vector,
-        pinecone_vector_id=f"role-{req.role_id}",
+        pinecone_vector_id=pinecone_id,
     )
 
 
@@ -315,3 +360,92 @@ async def compute_fitscore(req: FitScoreRequest) -> FitScoreResponse:
         explainability=explainability,
         bias_flags=bias_flags,
     )
+
+
+@router.post("/rolefit/candidate-vector", response_model=CandidateVectorResponse)
+async def upsert_candidate_vector(req: CandidateVectorRequest) -> CandidateVectorResponse:
+    """
+    Store candidate capability vector in Pinecone.
+    Called on profile update / skill attestation completion.
+    Prod: embeddings from custom 2048-dim multimodal model.
+    Dev: deterministic hash vector from skills list.
+    """
+    vector_seed = req.candidate_id + "".join(sorted(req.skills))
+    vector = _deterministic_vector(vector_seed, dim=2048)
+
+    pinecone_id = f"candidate-{req.candidate_id}"
+    idx = _pinecone_index()
+    upserted = False
+    if idx is not None:
+        try:
+            idx.upsert(vectors=[{
+                "id": pinecone_id,
+                "values": vector,
+                "metadata": {
+                    "type": "candidate",
+                    "candidate_id": req.candidate_id,
+                    "skills": req.skills[:50],  # Pinecone metadata size cap
+                    "kyc_tier": req.kyc_tier,
+                    "trust_score": req.trust_score,
+                },
+            }])
+            upserted = True
+        except Exception:
+            pass
+
+    return CandidateVectorResponse(
+        candidate_id=req.candidate_id,
+        pinecone_vector_id=pinecone_id,
+        upserted=upserted,
+    )
+
+
+class RoleMatchesRequest(BaseModel):
+    role_id: str
+    role_vector: list[float]
+    top_k: int = 50
+
+
+class RoleMatchResult(BaseModel):
+    candidate_id: str
+    similarity: float
+    kyc_tier: str
+    trust_score: float
+
+
+class RoleMatchesResponse(BaseModel):
+    role_id: str
+    matches: list[RoleMatchResult]
+    source: str  # "pinecone" | "synthetic"
+
+
+@router.post("/rolefit/matches", response_model=RoleMatchesResponse)
+async def find_role_matches(req: RoleMatchesRequest) -> RoleMatchesResponse:
+    """
+    Query Pinecone for top-K candidate vectors nearest to a role vector.
+    Returns matches with similarity scores for FitScore ranking.
+    Falls back to empty list if Pinecone not configured (Node API uses synthetic).
+    """
+    idx = _pinecone_index()
+    if idx is None:
+        return RoleMatchesResponse(role_id=req.role_id, matches=[], source="unavailable")
+
+    try:
+        result = idx.query(
+            vector=req.role_vector,
+            top_k=req.top_k,
+            filter={"type": {"$eq": "candidate"}},
+            include_metadata=True,
+        )
+        matches = []
+        for match in result.get("matches", []):
+            meta = match.get("metadata", {})
+            matches.append(RoleMatchResult(
+                candidate_id=meta.get("candidate_id", match["id"].replace("candidate-", "")),
+                similarity=round(match.get("score", 0.0), 4),
+                kyc_tier=meta.get("kyc_tier", "T6_SELF"),
+                trust_score=float(meta.get("trust_score", 0.5)),
+            ))
+        return RoleMatchesResponse(role_id=req.role_id, matches=matches, source="pinecone")
+    except Exception:
+        return RoleMatchesResponse(role_id=req.role_id, matches=[], source="error")

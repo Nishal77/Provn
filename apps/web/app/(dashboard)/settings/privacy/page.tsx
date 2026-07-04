@@ -1,10 +1,47 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+interface ConsentPreferences {
+  analytics: boolean
+  marketing: boolean
+  aiTraining: boolean
+}
+
+const CONSENT_KEY = 'attesta_consent_v1'
+
+function loadConsent(): ConsentPreferences {
+  if (typeof window === 'undefined') return { analytics: false, marketing: false, aiTraining: false }
+  try {
+    return JSON.parse(localStorage.getItem(CONSENT_KEY) ?? 'null') ?? { analytics: false, marketing: false, aiTraining: false }
+  } catch {
+    return { analytics: false, marketing: false, aiTraining: false }
+  }
+}
 
 export default function PrivacyPage() {
   const [exporting, setExporting] = useState(false)
   const [requestingErasure, setRequestingErasure] = useState(false)
+  const [consent, setConsent] = useState<ConsentPreferences>({ analytics: false, marketing: false, aiTraining: false })
+  const [consentSaved, setConsentSaved] = useState(false)
+
+  useEffect(() => {
+    setConsent(loadConsent())
+  }, [])
+
+  function updateConsent(key: keyof ConsentPreferences, value: boolean) {
+    const next = { ...consent, [key]: value }
+    setConsent(next)
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(next))
+    // Sync to backend
+    fetch('/api/gdpr/consent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(next),
+    }).catch(() => null)
+    setConsentSaved(true)
+    setTimeout(() => setConsentSaved(false), 2000)
+  }
   const [otp, setOtp] = useState('')
   const [confirmingErasure, setConfirmingErasure] = useState(false)
   const [step, setStep] = useState<'idle' | 'otp' | 'done'>('idle')
@@ -142,6 +179,58 @@ export default function PrivacyPage() {
         {error && (
           <p className="text-sm text-red-600 mt-3">{error}</p>
         )}
+      </section>
+
+      {/* GDPR Consent Management */}
+      <section className="space-y-4 border border-gray-200 rounded-lg p-6">
+        <div>
+          <h2 className="text-lg font-semibold">Consent Preferences</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Control how ATTESTA uses your data. Required processing is always active.
+          </p>
+          {consentSaved && <p className="text-sm text-green-600 mt-1">Preferences saved.</p>}
+        </div>
+        <div className="space-y-4">
+          {/* Analytics */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded"
+              checked={consent.analytics}
+              onChange={e => updateConsent('analytics', e.target.checked)}
+            />
+            <div>
+              <p className="text-sm font-medium">Analytics</p>
+              <p className="text-xs text-gray-500">Helps us improve the platform (Datadog, aggregated telemetry). No personal data sold.</p>
+            </div>
+          </label>
+          {/* Marketing */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded"
+              checked={consent.marketing}
+              onChange={e => updateConsent('marketing', e.target.checked)}
+            />
+            <div>
+              <p className="text-sm font-medium">Marketing Communications</p>
+              <p className="text-xs text-gray-500">Product updates, career insights, and featured opportunities via email.</p>
+            </div>
+          </label>
+          {/* AI Training */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded"
+              checked={consent.aiTraining}
+              onChange={e => updateConsent('aiTraining', e.target.checked)}
+            />
+            <div>
+              <p className="text-sm font-medium">AI Model Improvement</p>
+              <p className="text-xs text-gray-500">Anonymized skill evaluation data helps train better AI models. No PII included.</p>
+            </div>
+          </label>
+        </div>
       </section>
     </div>
   )

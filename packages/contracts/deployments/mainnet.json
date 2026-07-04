@@ -1,0 +1,44 @@
+{
+  "network": "polygon-mainnet",
+  "chainId": 137,
+  "deployedAt": null,
+  "contracts": {
+    "DIDRegistry": {
+      "address": null,
+      "txHash": null,
+      "blockNumber": null,
+      "abi": "artifacts/contracts/DIDRegistry.sol/DIDRegistry.json"
+    },
+    "SalaryRangeVerifier": {
+      "address": null,
+      "txHash": null,
+      "blockNumber": null,
+      "abi": "artifacts/contracts/SalaryRangeVerifier.sol/SalaryRangeVerifier.json"
+    },
+    "EmploymentVerifier": {
+      "address": null,
+      "txHash": null,
+      "blockNumber": null,
+      "abi": "artifacts/contracts/EmploymentVerifier.sol/EmploymentVerifier.json"
+    },
+    "ReferralEscrow": {
+      "address": null,
+      "txHash": null,
+      "blockNumber": null,
+      "abi": "artifacts/contracts/ReferralEscrow.sol/ReferralEscrow.json"
+    },
+    "BountyRegistry": {
+      "address": null,
+      "txHash": null,
+      "blockNumber": null,
+      "abi": "artifacts/contracts/BountyRegistry.sol/BountyRegistry.json"
+    },
+    "OpenRepDAO": {
+      "address": null,
+      "txHash": null,
+      "blockNumber": null,
+      "abi": "artifacts/contracts/OpenRepDAO.sol/OpenRepDAO.json"
+    }
+  },
+  "note": "Run: pnpm contracts deploy:mainnet -- fill addresses here and in .env AFTER Certik audit"
+}
