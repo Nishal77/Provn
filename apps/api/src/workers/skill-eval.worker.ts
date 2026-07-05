@@ -102,9 +102,9 @@ export function createSkillEvalWorker(deps: {
       })
     },
     {
-      connection: redis,
+      connection: redis as never,
       concurrency: 3,
-      lockDuration: 30 * 60 * 1000, // 30min lock — Bedrock calls can be slow
+      lockDuration: 30 * 60 * 1000,
     }
   )
 

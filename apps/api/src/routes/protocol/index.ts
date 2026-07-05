@@ -12,7 +12,6 @@
 //   GET  /protocol/linkedin/:username — lookup by LinkedIn username (extension)
 
 import type { FastifyInstance } from 'fastify'
-import { createBlockchainService } from '../../services/blockchain.service.js'
 import { env } from '../../config/env.js'
 
 export async function protocolRoutes(app: FastifyInstance) {
@@ -189,7 +188,7 @@ export async function protocolRoutes(app: FastifyInstance) {
         type: 'AI',
         description: 'CodeLlama 70B — evaluates code and skill artifacts',
       },
-      ...employers.map(e => ({
+      ...employers.map((e: { domain: string; name: string; logoUrl?: string | null; industry?: string | null }) => ({
         id: `did:attesta:employer:${e.domain}`,
         name: e.name,
         type: 'Employer',
@@ -212,11 +211,11 @@ export async function protocolRoutes(app: FastifyInstance) {
       where: { did },
       select: {
         did: true,
+        name: true,
+        imageUrl: true,
         kycTier: true,
         profile: {
           select: {
-            fullName: true,
-            avatarUrl: true,
             headline: true,
             overallTrustScore: true,
             completenessScore: true,
@@ -246,8 +245,8 @@ export async function protocolRoutes(app: FastifyInstance) {
     return reply.header('Cache-Control', 'public, max-age=60').send({
       did: user.did,
       kycTier: user.kycTier,
-      fullName: user.profile.fullName,
-      avatarUrl: user.profile.avatarUrl,
+      fullName: user.name,
+      avatarUrl: user.imageUrl,
       headline: user.profile.headline,
       trustScore: Number(user.profile.overallTrustScore ?? 0),
       completenessScore: Number(user.profile.completenessScore ?? 0),
@@ -267,8 +266,7 @@ export async function protocolRoutes(app: FastifyInstance) {
         isPublic: true,
       },
       select: {
-        user: { select: { did: true, kycTier: true } },
-        fullName: true,
+        user: { select: { did: true, kycTier: true, name: true } },
         overallTrustScore: true,
       },
     })
@@ -279,7 +277,7 @@ export async function protocolRoutes(app: FastifyInstance) {
 
     return reply.header('Cache-Control', 'public, max-age=300').send({
       did: profile.user.did,
-      fullName: profile.fullName,
+      fullName: profile.user.name,
       kycTier: profile.user.kycTier,
       trustScore: Number(profile.overallTrustScore ?? 0),
     })

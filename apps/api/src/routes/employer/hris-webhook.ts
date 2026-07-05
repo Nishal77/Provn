@@ -191,9 +191,7 @@ async function _processHrisEvent(
           department: event.position.department,
           employmentType: 'FULL_TIME',
           startDate: new Date(event.position.startDate),
-          status: 'PENDING_CANDIDATE',
-          initiatedBy: 'EMPLOYER',
-          // Salary stored encrypted — skip if not provided
+          status: 'PENDING_EMPLOYER',
         },
       })
       app.log.info({ candidateId: candidate.id, employerId }, 'HRIS HIRE: created employment record')

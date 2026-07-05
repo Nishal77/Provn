@@ -55,7 +55,6 @@ export async function gdprRoutes(app: FastifyInstance) {
         createdAt: user?.createdAt,
       },
       profile: profile ? {
-        fullName: profile.fullName,
         headline: profile.headline,
         location: profile.location,
         timezone: profile.timezone,
@@ -117,7 +116,7 @@ export async function gdprRoutes(app: FastifyInstance) {
           email: null,
           emailVerified: null,
           name: null,
-          image: null,
+          imageUrl: null,
           facetecSessionId: null,
           facetecVerifiedAt: null,
           kycStatus: 'ERASED',
@@ -127,14 +126,11 @@ export async function gdprRoutes(app: FastifyInstance) {
       app.db.profile.updateMany({
         where: { userId },
         data: {
-          fullName: null,
-          avatarUrl: null,
           headline: null,
           bio: null,
           linkedinUrl: null,
-          githubUrl: null,
+          githubUsername: null,
           websiteUrl: null,
-          phone: null,
           location: null,
           isPublic: false,
           isSearchable: false,

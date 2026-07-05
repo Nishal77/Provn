@@ -84,7 +84,7 @@ export async function employerBillingRoutes(app: FastifyInstance) {
       let event: { type: string; data: { object: Record<string, unknown> } }
 
       try {
-        event = constructWebhookEvent(req.rawBody as string, sig, secret) as typeof event
+        event = constructWebhookEvent(req.rawBody as string, sig, secret) as unknown as typeof event
       } catch (err) {
         app.log.warn({ err }, 'Stripe webhook signature verification failed')
         return reply.code(400).send({ error: 'Invalid signature.' })

@@ -5,7 +5,7 @@
 //
 // Anti-collusion: Isolation Forest score > 0.7 → flag referral for manual review.
 
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '@attesta/db'
 import { createId } from '@paralleldrive/cuid2'
 
 interface Deps { db: PrismaClient }
@@ -71,7 +71,7 @@ export function createTrustChainService({ db }: Deps) {
           const path: { userId: string; strengthToNext?: number }[] = []
           let cur: string | null = targetUserId
           while (cur) {
-            const n = visited.get(cur)!
+            const n: { prev: string | null; strength: number; hop: number } = visited.get(cur)!
             path.unshift({ userId: cur, strengthToNext: n.strength })
             cur = n.prev
           }
@@ -156,7 +156,6 @@ export function createTrustChainService({ db }: Deps) {
 
     if (tranche === 2) {
       if (!ref.hireTimestamp) throw Object.assign(new Error('Not hired yet'), { statusCode: 409 })
-      const daysSince = (Date.now() - ref.hireTimestamp.getTime()) / 86_400_000
       // Dev: skip 90-day check; prod checks on-chain
       return db.referral.update({
         where: { id: referralId },

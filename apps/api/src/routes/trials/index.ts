@@ -21,7 +21,7 @@ export async function trialRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'candidateId and roleTitle required' })
     }
     try {
-      const trial = await svc.createTrial(user.sub, body)
+      const trial = await svc.createTrial(user.sub, { ...body, domain: body.domain ?? 'CODE' })
       return reply.status(201).send({ trial })
     } catch (err: unknown) {
       const e = err as { statusCode?: number; message: string }

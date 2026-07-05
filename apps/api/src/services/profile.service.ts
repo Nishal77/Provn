@@ -2,7 +2,6 @@ import { db } from '@attesta/db'
 import { calculateCompleteness } from './completeness.service.js'
 import { didService } from './did.service.js'
 import { ipfsService } from './ipfs.service.js'
-import type { Prisma } from '@attesta/db'
 
 export type UpdateProfileInput = {
   name?: string
@@ -68,11 +67,11 @@ export const profileService = {
     })
 
     // Update name on User model if provided
-    const updateUser: Prisma.UserUpdateInput = {}
+    const updateUser: Record<string, unknown> = {}
     if (input.name !== undefined) updateUser.name = input.name
 
     // Build profile update
-    const profileUpdate: Prisma.ProfileUpdateInput = {}
+    const profileUpdate: Record<string, unknown> = {}
     if (input.headline !== undefined) profileUpdate.headline = input.headline
     if (input.bio !== undefined) profileUpdate.bio = input.bio
     if (input.location !== undefined) profileUpdate.location = input.location

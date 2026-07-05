@@ -118,7 +118,7 @@ export default function RoleDetailPage() {
 
       <div className="space-y-3">
         {matches.map((m, i) => (
-          <MatchCard key={m.fitScoreId ?? i} match={m} onInterest={handleInterest} loading={interestLoading} />
+          <MatchCard key={m.id ?? i} match={m} onInterest={handleInterest} loading={interestLoading} />
         ))}
       </div>
     </div>
@@ -130,7 +130,7 @@ function MatchCard({
   onInterest,
   loading,
 }: {
-  match: StoredFitScore & { fitScoreId?: string; candidate: { id?: string; kycTier?: string; trustScore?: number; blindMode?: boolean } }
+  match: StoredFitScore & { candidate?: { id?: string; kycTier?: string; trustScore?: number; blindMode?: boolean } }
   onInterest: (id: string) => void
   loading: string | null
 }) {

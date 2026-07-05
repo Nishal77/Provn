@@ -21,7 +21,7 @@ const COUNTRY_FLAG: Record<string, string> = {
 
 export default function IssuersPage() {
   const [issuers, setIssuers] = useState<Issuer[]>([])
-  const [loading, setLoading] = useState(true)
+  const [_loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/protocol/issuers')

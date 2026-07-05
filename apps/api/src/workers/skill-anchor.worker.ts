@@ -111,14 +111,14 @@ export function createSkillAnchorWorker(deps: { db: PrismaClient; redis: Redis }
           },
         }),
         db.user.updateMany({
-          where: { id: attestation.userId, kycTier: { in: UPGRADEABLE_TO_T5 } },
+          where: { id: attestation.userId, kycTier: { in: UPGRADEABLE_TO_T5 as never } },
           data: { kycTier: 'T5_AI_INFERRED' },
         }),
       ])
 
       console.log(`[skill-anchor] Attestation ${attestationId} anchored: ${anchorResult.txHash}`)
     },
-    { connection: redis, concurrency: 5 }
+    { connection: redis as never, concurrency: 5 }
   )
 
   worker.on('failed', (job, err) => {

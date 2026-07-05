@@ -7,7 +7,7 @@
 //   4. GET /roles/:id/matches → cosine similarity query → compute FitScores → top-50
 //   5. Employer expresses interest → candidate notified → identities revealed on mutual
 
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '@attesta/db'
 import type { Queue } from 'bullmq'
 import { createId } from '@paralleldrive/cuid2'
 import type { FitScoreExplainability } from '@attesta/shared'
@@ -80,10 +80,10 @@ export function createRoleService({ db, roleExtractQueue }: Deps) {
 
     // Dev mode: if no scores cached, generate synthetic matches
     if (scores.length === 0) {
-      scores = await _generateSyntheticMatches(db, role, limit)
+      scores = (await _generateSyntheticMatches(db, role, limit)) as unknown as typeof scores
     }
 
-    return scores.map(s => _anonymize(s, role.blindMode))
+    return scores.map((s) => _anonymize(s as never, role.blindMode))
   }
 
   async function expressInterest(roleId: string, employerId: string, candidateId: string) {
@@ -146,7 +146,7 @@ export function createRoleService({ db, roleExtractQueue }: Deps) {
       { level: 'staff',  p25: 190_000, p50: 225_000, p75: 260_000, p90: 300_000 },
     ]
     const levelKey = (params.level ?? 'senior').toLowerCase()
-    const stub = stubs.find(s => s.level === levelKey) ?? stubs[2]
+    const stub = stubs.find(s => s.level === levelKey) ?? stubs[2]!
     return {
       role: params.role ?? 'Software Engineer',
       level: levelKey,
@@ -167,7 +167,7 @@ export function createRoleService({ db, roleExtractQueue }: Deps) {
 async function _generateSyntheticMatches(db: PrismaClient, role: { id: string; compensationMinUsd: number | null; compensationMaxUsd: number | null }, limit: number) {
   const candidates = await db.user.findMany({
     take: Math.min(limit, 20),
-    where: { kycTier: { not: null } },
+    where: {},
     include: { profile: { select: { overallTrustScore: true } }, skillAttestations: { where: { status: 'ANCHORED' } } },
   })
 
@@ -226,7 +226,7 @@ async function _generateSyntheticMatches(db: PrismaClient, role: { id: string; c
     skipDuplicates: true,
   })
 
-  return rows.sort((a, b) => b.overallScore - a.overallScore) as never
+  return rows.sort((a, b) => b.overallScore - a.overallScore)
 }
 
 function _anonymize(score: {

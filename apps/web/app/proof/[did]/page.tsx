@@ -131,11 +131,10 @@ export default async function PublicProfilePage({
 
         {/* Shareable ProofWork badge */}
         <ProofWorkBadge
-          name={profile.name}
+          name={profile.name ?? ''}
           headline={profile.headline}
           did={profile.did}
-          kycTier={profile.kycTier}
-          trustScore={profile.overallTrustScore}
+          tier={profile.kycTier}
         />
 
         {/* Verification call-to-action for visitors */}

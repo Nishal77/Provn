@@ -3,8 +3,8 @@
 // in the Role row. In production, also upserts the vector to Pinecone.
 
 import { Worker } from 'bullmq'
-import type { PrismaClient } from '@prisma/client'
-import type { IORedis } from 'ioredis'
+import type { PrismaClient } from '@attesta/db'
+import type { Redis as IORedis } from 'ioredis'
 
 const AI_SERVICE = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
 

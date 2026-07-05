@@ -10,7 +10,6 @@
 //     → status → VERIFIED (or FAILED if proof invalid)
 
 import type { PrismaClient } from '@attesta/db'
-import { createBlockchainService } from './blockchain.service.js'
 import { env } from '../config/env.js'
 
 export interface RequestDisclosureInput {
@@ -116,7 +115,7 @@ export function createZKDisclosureService(deps: { db: PrismaClient }) {
       where: { id: req.id },
       data: {
         status: 'PROOF_SUBMITTED',
-        proof: { proof: input.proof, publicSignals: input.publicSignals } as unknown as Record<string, unknown>,
+        proof: { proof: input.proof, publicSignals: input.publicSignals } as never,
       },
     })
 
@@ -168,10 +167,10 @@ async function _verifyOnChain(args: {
   publicSignals: string[]
   verifierAddress: string
 }): Promise<{ verified: boolean; txHash?: string }> {
-  const { createPublicClient, createWalletClient, http, parseAbi } = await import('viem')
-  const { polygon, polygonMumbai } = await import('viem/chains')
+  const { createPublicClient, http, parseAbi } = await import('viem')
+  const { polygon, polygonAmoy } = await import('viem/chains')
 
-  const chain = env.NODE_ENV === 'production' ? polygon : polygonMumbai
+  const chain = env.NODE_ENV === 'production' ? polygon : polygonAmoy
   const rpcUrl = env.NODE_ENV === 'production'
     ? (env.POLYGON_RPC_URL ?? 'https://polygon-rpc.com')
     : (env.AMOY_RPC_URL ?? 'https://rpc-amoy.polygon.technology')
@@ -191,9 +190,9 @@ async function _verifyOnChain(args: {
     abi,
     functionName: 'verifyProof',
     args: [
-      [BigInt(pi_a[0]), BigInt(pi_a[1])],
-      [[BigInt(pi_b[0][0]), BigInt(pi_b[0][1])], [BigInt(pi_b[1][0]), BigInt(pi_b[1][1])]],
-      [BigInt(pi_c[0]), BigInt(pi_c[1])],
+      [BigInt(pi_a[0]!), BigInt(pi_a[1]!)],
+      [[BigInt(pi_b[0]![0]!), BigInt(pi_b[0]![1]!)], [BigInt(pi_b[1]![0]!), BigInt(pi_b[1]![1]!)]],
+      [BigInt(pi_c[0]!), BigInt(pi_c[1]!)],
       signals,
     ],
   })

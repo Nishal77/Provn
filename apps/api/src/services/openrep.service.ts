@@ -5,11 +5,9 @@
  *
  * Security: no PII returned. On-chain: only hashes. ZK: client-side only.
  */
-import { PrismaClient } from '@prisma/client'
-import { createHash, randomBytes } from 'crypto'
+import { db } from '@attesta/db'
+import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
-
-const db = new PrismaClient()
 
 // ────────────────── DID RESOLUTION ──────────────────
 
@@ -71,14 +69,14 @@ export async function getVCMetadata(vcId: string) {
       status: true,
       chainTxHash: true,
       createdAt: true,
-      profile: { select: { user: { select: { did: true } } } },
+      user: { select: { did: true } },
     },
   })
   if (skill) {
     return {
       id: vcId,
       type: 'SkillAttestation',
-      subject: skill.profile.user.did,
+      subject: skill.user.did,
       claim: { skill: skill.skillSlug, level: skill.skillLevel },
       chainTxHash: skill.chainTxHash,
       issuedAt: skill.createdAt,
@@ -89,18 +87,17 @@ export async function getVCMetadata(vcId: string) {
     where: { id: vcId },
     select: {
       id: true,
-      verificationTier: true,
       chainTxHash: true,
       createdAt: true,
-      profile: { select: { user: { select: { did: true } } } },
+      candidate: { select: { did: true } },
     },
   })
   if (emp) {
     return {
       id: vcId,
       type: 'EmploymentRecord',
-      subject: emp.profile.user.did,
-      verificationTier: emp.verificationTier,
+      subject: emp.candidate.did,
+      verificationTier: 'T2_EMPLOYER',
       chainTxHash: emp.chainTxHash,
       issuedAt: emp.createdAt,
     }
@@ -236,10 +233,15 @@ export async function getPublicProfile(did: string) {
     where: { user: { did } },
     select: {
       overallTrustScore: true,
-      user: { select: { did: true, kycTier: true } },
-      skillAttestations: {
-        where: { status: 'ANCHORED' },
-        select: { skillSlug: true, skillLevel: true, aiEvalScore: true },
+      user: {
+        select: {
+          did: true,
+          kycTier: true,
+          skillAttestations: {
+            where: { status: 'ANCHORED' },
+            select: { skillSlug: true, skillLevel: true, aiEvalScore: true },
+          },
+        },
       },
     },
   })

@@ -3,8 +3,8 @@
 // Anti-cheat: if keystroke entropy < 0.3 or paste count > 20, flags and scores penalized.
 
 import { Worker } from 'bullmq'
-import type { PrismaClient } from '@prisma/client'
-import type { IORedis } from 'ioredis'
+import type { PrismaClient } from '@attesta/db'
+import type { Redis as IORedis } from 'ioredis'
 
 const AI_SERVICE = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
 const ANTI_CHEAT_ENTROPY_MIN = 0.3
@@ -82,7 +82,7 @@ export function createTrialEvalWorker({ db, redis }: WorkerDeps) {
             const candidate = await db.user.findUnique({ where: { id: trial.candidateId }, select: { stripeAccountId: true } })
             if (candidate?.stripeAccountId) {
               await stripe.transfers.create({
-                amount: Math.round(trial.candidatePayoutAmountUsd * 100), // cents
+                amount: Math.round(Number(trial.candidatePayoutAmountUsd) * 100),
                 currency: 'usd',
                 destination: candidate.stripeAccountId,
                 metadata: { trialId, candidateId: trial.candidateId },

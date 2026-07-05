@@ -1,24 +1,16 @@
-import type Stripe from 'stripe'
+import Stripe from 'stripe'
 import { env } from '../config/env.js'
 
-// Lazy-initialise Stripe — only needed when billing routes are hit.
-// Key is optional; routes check env and return 503 if missing.
 let _stripe: Stripe | null = null
 
 export function getStripe(): Stripe {
   if (_stripe) return _stripe
   const key = env.STRIPE_SECRET_KEY
   if (!key) throw new Error('STRIPE_SECRET_KEY not configured')
-  // Dynamically import so the module graph doesn't fail at startup when key is absent
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const StripeLib = require('stripe') as typeof import('stripe')
-  const StripeConstructor = (StripeLib as unknown as { default: typeof import('stripe') }).default ?? StripeLib
-  _stripe = new StripeConstructor(key, { apiVersion: '2024-06-20' })
+  _stripe = new Stripe(key, { apiVersion: '2024-06-20' })
   return _stripe
 }
 
-// Price IDs — throws at call-time if unconfigured so misconfiguration surfaces
-// immediately as a readable error rather than a cryptic Stripe API rejection.
 export function getStripePrices(): { PER_HIRE: string; SUBSCRIPTION: string } {
   const perHire = env.STRIPE_PRICE_PER_HIRE
   const subscription = env.STRIPE_PRICE_SUBSCRIPTION
@@ -40,7 +32,6 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
   const stripe = getStripe()
   const prices = getStripePrices()
 
-  // PER_HIRE → one-time payment mode; SUBSCRIPTION → recurring subscription mode
   const isSubscription = params.plan === 'SUBSCRIPTION'
 
   const session = await stripe.checkout.sessions.create({

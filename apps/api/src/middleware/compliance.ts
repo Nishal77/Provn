@@ -29,7 +29,7 @@ const AI_DECISION_ROUTES = [
 
 export const compliancePlugin = fp(async (app: FastifyInstance) => {
   // ── 1. Data residency header (used by Cloudflare routing rules) ──
-  app.addHook('onSend', async (req, reply) => {
+  app.addHook('onSend', async (_req, reply) => {
     const region = process.env.AWS_REGION ?? 'us-east-1'
     reply.header('X-Data-Region', region)
 

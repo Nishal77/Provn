@@ -10,8 +10,8 @@
     "build:android": "eas build --platform android"
   },
   "dependencies": {
-    "@attesta/shared": "*",
-    "@openrep/sdk": "*",
+    "@attesta/shared": "workspace:*",
+    "@openrep/sdk": "workspace:*",
     "@expo/vector-icons": "^14.0.0",
     "expo": "~51.0.0",
     "expo-router": "~3.5.0",

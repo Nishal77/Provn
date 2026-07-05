@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '@attesta/db'
 import type { Queue } from 'bullmq'
 import { createId } from '@paralleldrive/cuid2'
 import { env } from '../config/env.js'

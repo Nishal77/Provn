@@ -320,6 +320,7 @@ export default function LivenessPage() {
       const timer = setTimeout(startOnfidoDocumentCheck, 1_500)
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [phase, startOnfidoDocumentCheck])
 
   // Cleanup Onfido on unmount

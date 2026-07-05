@@ -10,7 +10,6 @@
 
 import type { PrismaClient } from '@attesta/db'
 import type { Queue } from 'bullmq'
-import { env } from '../config/env.js'
 
 export interface SubmitSkillInput {
   skillSlug: string
@@ -119,7 +118,7 @@ export function createSkillService(deps: {
             status: 'FAILED',
             plagiarismScore: result.plagiarismScore,
             aiEvalScore: result.overallScore,
-            aiEvalReport: result as unknown as Record<string, unknown>,
+            aiEvalReport: result as never,
           },
         }),
         db.skillEvalJob.update({
@@ -138,7 +137,7 @@ export function createSkillService(deps: {
           skillLevel: result.skillLevel,
           aiEvalScore: result.overallScore,
           plagiarismScore: result.plagiarismScore,
-          aiEvalReport: result as unknown as Record<string, unknown>,
+          aiEvalReport: result as never,
         },
       }),
       db.skillEvalJob.update({

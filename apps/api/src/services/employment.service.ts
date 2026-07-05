@@ -47,7 +47,7 @@ export function createEmploymentService(deps: {
 
     const candidate = await db.user.findUnique({
       where: { id: candidateId },
-      select: { id: true, name: true, profile: { select: { fullName: true } } },
+      select: { id: true, name: true },
     })
     if (!candidate) throw new Error('CANDIDATE_NOT_FOUND')
 
@@ -83,7 +83,7 @@ export function createEmploymentService(deps: {
       include: { employer: { select: { name: true } } },
     })
 
-    const candidateName = candidate.profile?.fullName ?? candidate.name ?? 'A professional'
+    const candidateName = candidate.name ?? 'A professional'
     const webUrl = env.WEB_URL ?? 'https://attesta.io'
     const countersignUrl = `${webUrl}/employment/countersign/${countersignToken}`
 
@@ -120,7 +120,8 @@ export function createEmploymentService(deps: {
         candidate: {
           select: {
             did: true,
-            profile: { select: { fullName: true, avatarUrl: true } },
+            name: true,
+            imageUrl: true,
           },
         },
         employer: { select: { name: true, domain: true } },
@@ -232,7 +233,8 @@ export function createEmploymentService(deps: {
         candidate: {
           select: {
             did: true,
-            profile: { select: { fullName: true, avatarUrl: true } },
+            name: true,
+            imageUrl: true,
           },
         },
       },
@@ -247,7 +249,7 @@ export function createEmploymentService(deps: {
       where: { id: recordId },
       include: {
         employer: { select: { name: true, domain: true, adminUserId: true } },
-        candidate: { select: { id: true, profile: { select: { fullName: true } } } },
+        candidate: { select: { id: true, name: true } },
       },
     })
 

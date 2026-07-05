@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { auth } from '../../../../auth'
 
 export async function POST(request: Request) {
-  const session = await getServerSession()
+  const session = await auth()
   const body = await request.json() as { analytics?: boolean; marketing?: boolean; aiTraining?: boolean }
 
   if (!session?.user?.email) {

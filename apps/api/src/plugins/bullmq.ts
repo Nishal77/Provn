@@ -28,16 +28,25 @@ declare module 'fastify' {
 }
 
 export const bullmqPlugin = fp(async (app: FastifyInstance) => {
+  // Parse Redis URL into separate options so BullMQ uses its own ioredis version (avoids version conflict).
   const { default: Redis } = await import('ioredis')
-  const connection = new Redis(app.redis.options as ConstructorParameters<typeof Redis>[0], {
+  const redisUrl = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379')
+  const isTLS = redisUrl.protocol === 'rediss:'
+  const redisOpts = {
+    host: redisUrl.hostname,
+    port: Number(redisUrl.port) || 6379,
+    username: redisUrl.username || undefined,
+    password: redisUrl.password || undefined,
     maxRetriesPerRequest: null,
-  })
+    ...(isTLS ? { tls: {} } : {}),
+  }
+  const connection = new Redis(redisOpts as never)
 
-  const anchorQueue       = new Queue('employment-anchor-queue', { connection })
-  const skillEvalQueue    = new Queue('skill-eval-queue',        { connection })
-  const skillAnchorQueue  = new Queue('skill-anchor-queue',      { connection })
-  const trialEvalQueue    = new Queue('trial-eval-queue',        { connection })
-  const roleExtractQueue  = new Queue('role-extract-queue',      { connection })
+  const anchorQueue       = new Queue('employment-anchor-queue', { connection: connection as never })
+  const skillEvalQueue    = new Queue('skill-eval-queue',        { connection: connection as never })
+  const skillAnchorQueue  = new Queue('skill-anchor-queue',      { connection: connection as never })
+  const trialEvalQueue    = new Queue('trial-eval-queue',        { connection: connection as never })
+  const roleExtractQueue  = new Queue('role-extract-queue',      { connection: connection as never })
 
   app.decorate('anchorQueue',      anchorQueue)
   app.decorate('skillEvalQueue',   skillEvalQueue)
@@ -46,11 +55,11 @@ export const bullmqPlugin = fp(async (app: FastifyInstance) => {
   app.decorate('roleExtractQueue', roleExtractQueue)
 
   if (process.env.WORKER_DISABLED !== 'true') {
-    createEmploymentAnchorWorker({ db: app.db, redis: connection })
-    createSkillEvalWorker({ db: app.db, redis: connection, skillEvalQueue, skillAnchorQueue })
-    createSkillAnchorWorker({ db: app.db, redis: connection })
-    createTrialEvalWorker({ db: app.db, redis: connection })
-    createRoleExtractWorker({ db: app.db, redis: connection })
+    createEmploymentAnchorWorker({ db: app.db, redis: connection as never })
+    createSkillEvalWorker({ db: app.db, redis: connection as never, skillEvalQueue, skillAnchorQueue })
+    createSkillAnchorWorker({ db: app.db, redis: connection as never })
+    createTrialEvalWorker({ db: app.db, redis: connection as never })
+    createRoleExtractWorker({ db: app.db, redis: connection as never })
     app.log.info('[bullmq] All workers started in-process (anchor + skill + trial + rolefit)')
   }
 

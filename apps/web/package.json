@@ -15,16 +15,17 @@
     "@attesta/shared": "workspace:*",
     "@attesta/ui": "workspace:*",
     "@auth/prisma-adapter": "^2.7.2",
+    "@hookform/resolvers": "^3.9.0",
     "@privy-io/react-auth": "^1.93.0",
     "@tanstack/react-query": "^5.59.0",
+    "framer-motion": "^11.11.8",
+    "jose": "^6.2.3",
     "next": "14.2.15",
     "next-auth": "5.0.0-beta.22",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.0",
-    "zod": "^3.23.8",
-    "@hookform/resolvers": "^3.9.0",
-    "framer-motion": "^11.11.8"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",

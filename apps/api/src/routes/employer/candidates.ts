@@ -1,7 +1,3 @@
-// Employer candidate browser — searches public ProofWork profiles.
-// Returns anonymised summaries (no email, no exact salary).
-// Full identity revealed only after mutual interest + ZK disclosure.
-
 import type { FastifyInstance } from 'fastify'
 import { authenticate } from '../../middleware/authenticate.js'
 
@@ -21,8 +17,8 @@ export async function employerCandidatesRoute(app: FastifyInstance) {
         isSearchable: true,
         ...(q ? {
           OR: [
-            { fullName: { contains: q, mode: 'insensitive' } },
             { headline: { contains: q, mode: 'insensitive' } },
+            { user: { name: { contains: q, mode: 'insensitive' } } },
           ],
         } : {}),
         ...(tier ? { user: { kycTier: tier as never } } : {}),
@@ -39,6 +35,8 @@ export async function employerCandidatesRoute(app: FastifyInstance) {
           select: {
             did: true,
             kycTier: true,
+            name: true,
+            imageUrl: true,
             skillAttestations: {
               where: { status: 'ANCHORED' },
               select: { skillSlug: true, skillLevel: true },
@@ -47,8 +45,6 @@ export async function employerCandidatesRoute(app: FastifyInstance) {
             },
           },
         },
-        fullName: true,
-        avatarUrl: true,
         headline: true,
         overallTrustScore: true,
       },
@@ -57,11 +53,11 @@ export async function employerCandidatesRoute(app: FastifyInstance) {
       orderBy: { overallTrustScore: 'desc' },
     })
 
-    const data = candidates.map(p => ({
+    const data = candidates.map((p) => ({
       did: p.user.did,
       kycTier: p.user.kycTier,
-      fullName: p.fullName,
-      avatarUrl: p.avatarUrl,
+      fullName: p.user.name,
+      avatarUrl: p.user.imageUrl,
       headline: p.headline,
       trustScore: Number(p.overallTrustScore ?? 0),
       skills: p.user.skillAttestations,

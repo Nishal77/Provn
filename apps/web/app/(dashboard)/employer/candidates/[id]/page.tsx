@@ -1,6 +1,5 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { SignJWT } from 'jose'
 import Link from 'next/link'
 
 async function fetchProfile(did: string): Promise<Record<string, unknown> | null> {

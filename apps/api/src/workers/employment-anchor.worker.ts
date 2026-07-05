@@ -11,7 +11,6 @@ import { Worker, type Job } from 'bullmq'
 import type { PrismaClient } from '@attesta/db'
 import type { Redis } from 'ioredis'
 import { createBlockchainService } from '../services/blockchain.service.js'
-import { ipfsService } from '../services/ipfs.service.js'
 import { sendAnchorConfirmation } from '../services/email.service.js'
 import { env } from '../config/env.js'
 
@@ -20,7 +19,7 @@ export interface AnchorJobPayload {
 }
 
 // Tiers that can be upgraded to T2 — T1 (government) is higher and must not be downgraded
-const UPGRADEABLE_TO_T2 = ['T6_SELF', 'T5_AI_INFERRED', 'T4_PEER', 'T3_INSTITUTION'] as const
+const UPGRADEABLE_TO_T2: string[] = ['T6_SELF', 'T5_AI_INFERRED', 'T4_PEER', 'T3_INSTITUTION']
 
 export function createEmploymentAnchorWorker(deps: {
   db: PrismaClient
@@ -43,7 +42,6 @@ export function createEmploymentAnchorWorker(deps: {
               email: true,
               kycTier: true,
               name: true,
-              profile: { select: { fullName: true } },
             },
           },
           employer: { select: { name: true } },
@@ -155,7 +153,7 @@ export function createEmploymentAnchorWorker(deps: {
         db.user.updateMany({
           where: {
             id: record.candidateId,
-            kycTier: { in: UPGRADEABLE_TO_T2 },
+            kycTier: { in: UPGRADEABLE_TO_T2 as never },
           },
           data: { kycTier: 'T2_EMPLOYER' },
         }),
@@ -171,7 +169,7 @@ export function createEmploymentAnchorWorker(deps: {
 
         await sendAnchorConfirmation({
           toEmail: candidateEmail,
-          candidateName: record.candidate.profile?.fullName ?? record.candidate.name ?? 'there',
+          candidateName: record.candidate.name ?? 'there',
           jobTitle: record.jobTitle,
           employerName: record.employer.name,
           chainTxHash: txHash,
@@ -180,7 +178,7 @@ export function createEmploymentAnchorWorker(deps: {
       }
     },
     {
-      connection: redis,
+      connection: redis as never,
       concurrency: 5,
     }
   )
