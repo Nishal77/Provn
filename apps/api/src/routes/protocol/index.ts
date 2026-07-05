@@ -8,11 +8,18 @@
 //   GET  /protocol/vc/:id            — retrieve VC metadata (no PII)
 //   POST /protocol/verify            — verify a VC or ZK proof
 //   GET  /protocol/issuers           — list registered issuers
+//   POST /protocol/issuers           — register issuer (ATTESTA admin only)
+//   POST /protocol/issue             — issue credential (issuer API key auth)
 //   GET  /protocol/profile/:did      — public ProofWork profile summary
 //   GET  /protocol/linkedin/:username — lookup by LinkedIn username (extension)
 
 import type { FastifyInstance } from 'fastify'
 import { env } from '../../config/env.js'
+import { authenticate } from '../../middleware/authenticate.js'
+import {
+  registerIssuer,
+  issueCredential,
+} from '../../services/openrep.service.js'
 
 export async function protocolRoutes(app: FastifyInstance) {
   // ── GET /protocol/did/:did ───────────────────────────────────────────────
@@ -253,6 +260,29 @@ export async function protocolRoutes(app: FastifyInstance) {
       skills: user.skillAttestations,
       employment: user.employmentRecords,
     })
+  })
+
+  // ── POST /protocol/issuers — admin only ─────────────────────────────────
+  app.post<{ Body: { did: string; name: string; domain: string; countryCode: string; logoUrl?: string; websiteUrl?: string } }>(
+    '/protocol/issuers',
+    { preHandler: [authenticate] },
+    async (req, reply) => {
+      const result = await registerIssuer(req.body)
+      return reply.status(201).send({ issuer: result, apiKey: result.apiKey })
+    }
+  )
+
+  // ── POST /protocol/issue — issuer API key auth ───────────────────────────
+  app.post<{
+    Body: { issuerApiKey: string; profileDid: string; credentialType: string; schemaUrl: string; evidenceCid?: string; expiresAt?: string }
+  }>('/protocol/issue', async (req, reply) => {
+    try {
+      const credential = await issueCredential(req.body)
+      return reply.status(201).send({ credential })
+    } catch (e: unknown) {
+      const err = e as { statusCode?: number; message: string }
+      return reply.status(err.statusCode ?? 500).send({ error: err.message })
+    }
   })
 
   // ── GET /protocol/linkedin/:username ─────────────────────────────────────
