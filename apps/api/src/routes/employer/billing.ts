@@ -40,7 +40,7 @@ export async function employerBillingRoutes(app: FastifyInstance) {
         })
       }
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://attesta.io'
+      const appUrl = env.WEB_URL
 
       try {
         const checkoutUrl = await createCheckoutSession({

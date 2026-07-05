@@ -6,6 +6,7 @@ import { z } from 'zod'
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(4000),
+  APP_REGION: z.string().default('us-east-1'), // data residency header for GDPR/DPDP routing
 
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),

@@ -8,6 +8,8 @@
 //
 // Set WORKER_DISABLED=true to run workers in a separate pod (production split).
 
+import { env } from '../config/env.js'
+
 import fp from 'fastify-plugin'
 import type { FastifyInstance } from 'fastify'
 import { Queue } from 'bullmq'
@@ -30,7 +32,7 @@ declare module 'fastify' {
 export const bullmqPlugin = fp(async (app: FastifyInstance) => {
   // Parse Redis URL into separate options so BullMQ uses its own ioredis version (avoids version conflict).
   const { default: Redis } = await import('ioredis')
-  const redisUrl = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379')
+  const redisUrl = new URL(env.REDIS_URL)
   const isTLS = redisUrl.protocol === 'rediss:'
   const redisOpts = {
     host: redisUrl.hostname,

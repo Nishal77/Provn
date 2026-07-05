@@ -5,8 +5,9 @@
 import { Worker } from 'bullmq'
 import type { PrismaClient } from '@attesta/db'
 import type { Redis as IORedis } from 'ioredis'
+import { env } from '../config/env.js'
 
-const AI_SERVICE = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
+const AI_SERVICE = env.AI_SERVICE_URL
 const ANTI_CHEAT_ENTROPY_MIN = 0.3
 const ANTI_CHEAT_PASTE_MAX = 20
 
@@ -76,9 +77,9 @@ export function createTrialEvalWorker({ db, redis }: WorkerDeps) {
         })
 
         // Stripe Connect payout — transfer candidate fee if Stripe configured and not cheating
-        if (!cheating && process.env.STRIPE_SECRET_KEY && trial.candidatePayoutAmountUsd) {
+        if (!cheating && env.STRIPE_SECRET_KEY && trial.candidatePayoutAmountUsd) {
           try {
-            const stripe = await import('stripe').then(m => new m.default(process.env.STRIPE_SECRET_KEY!))
+            const stripe = await import('stripe').then(m => new m.default(env.STRIPE_SECRET_KEY!))
             const candidate = await db.user.findUnique({ where: { id: trial.candidateId }, select: { stripeAccountId: true } })
             if (candidate?.stripeAccountId) {
               await stripe.transfers.create({

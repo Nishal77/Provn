@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import type { PrismaClient } from '@attesta/db'
 import type { BlockchainService } from './blockchain.service.js'
 import type { IpfsService } from './ipfs.service.js'
+import { env } from '../config/env.js'
 
 // ─────────────────────────────────────────────────────────
 // Onfido integration
@@ -108,7 +109,7 @@ export function createKycService(deps: KycServiceDeps) {
       method: 'POST',
       body: JSON.stringify({
         applicant_id: applicantId,
-        referrer: process.env.WEB_URL ?? 'http://localhost:3000',
+        referrer: env.WEB_URL,
       }),
     })
     return data.token

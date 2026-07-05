@@ -20,13 +20,15 @@ export type ProfileSnapshot = {
   // Never include email — PII must not touch IPFS
 }
 
+import { env } from '../config/env.js'
+
 export const ipfsService = {
   /**
    * Pin a profile snapshot to IPFS via Pinata.
    * Returns the IPFS CID on success, null if Pinata is not configured.
    */
   async pinProfile(snapshot: ProfileSnapshot): Promise<string | null> {
-    const jwt = process.env.PINATA_JWT
+    const jwt = env.PINATA_JWT
     if (!jwt) {
       // Not an error — Pinata is optional until Phase 8
       return null
@@ -63,7 +65,7 @@ export const ipfsService = {
    * Silently succeeds if PINATA_JWT is not configured.
    */
   async unpin(cid: string): Promise<void> {
-    const jwt = process.env.PINATA_JWT
+    const jwt = env.PINATA_JWT
     if (!jwt) return
 
     await fetch(`https://api.pinata.cloud/pinning/unpin/${cid}`, {

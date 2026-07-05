@@ -10,6 +10,7 @@
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import fp from 'fastify-plugin'
+import { env } from '../config/env.js'
 
 // Routes that access PII — logged for SOC 2 audit trail
 const PII_ACCESS_ROUTES = [
@@ -30,7 +31,7 @@ const AI_DECISION_ROUTES = [
 export const compliancePlugin = fp(async (app: FastifyInstance) => {
   // ── 1. Data residency header (used by Cloudflare routing rules) ──
   app.addHook('onSend', async (_req, reply) => {
-    const region = process.env.AWS_REGION ?? 'us-east-1'
+    const region = env.APP_REGION
     reply.header('X-Data-Region', region)
 
     // EU users: tell CDN this response has GDPR-origin data

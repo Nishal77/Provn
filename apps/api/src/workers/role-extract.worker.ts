@@ -5,8 +5,9 @@
 import { Worker } from 'bullmq'
 import type { PrismaClient } from '@attesta/db'
 import type { Redis as IORedis } from 'ioredis'
+import { env } from '../config/env.js'
 
-const AI_SERVICE = process.env.AI_SERVICE_URL ?? 'http://localhost:8000'
+const AI_SERVICE = env.AI_SERVICE_URL
 
 interface WorkerDeps {
   db: PrismaClient
