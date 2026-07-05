@@ -87,6 +87,12 @@ export function createSkillAnchorWorker(deps: { db: PrismaClient; redis: Redis }
         ? (env.POLYGON_DID_REGISTRY_ADDRESS ?? env.DID_REGISTRY_ADDRESS ?? '')
         : (env.AMOY_DID_REGISTRY_ADDRESS ?? env.DID_REGISTRY_ADDRESS ?? '')
 
+      if (!contractAddress) {
+        console.warn(`[skill-anchor] DID_REGISTRY_ADDRESS not configured — skipping on-chain anchor for attestation ${attestationId}`)
+        await db.skillAttestation.update({ where: { id: attestationId }, data: { status: 'SCORED' } })
+        return
+      }
+
       const chain = createBlockchainService({
         rpcUrl,
         privateKey: (env.DEPLOYER_PRIVATE_KEY ?? '0x0') as `0x${string}`,

@@ -123,6 +123,12 @@ export function createEmploymentAnchorWorker(deps: {
         ? (env.POLYGON_DID_REGISTRY_ADDRESS ?? env.DID_REGISTRY_ADDRESS ?? '')
         : (env.AMOY_DID_REGISTRY_ADDRESS ?? env.DID_REGISTRY_ADDRESS ?? '')
 
+      if (!contractAddress) {
+        console.warn(`[anchor-worker] DID_REGISTRY_ADDRESS not configured — skipping on-chain anchor for record ${recordId}`)
+        await db.employmentRecord.update({ where: { id: recordId }, data: { status: 'SIGNED' } })
+        return
+      }
+
       const chain = createBlockchainService({
         rpcUrl,
         privateKey: (env.DEPLOYER_PRIVATE_KEY ?? '0x0') as `0x${string}`,
