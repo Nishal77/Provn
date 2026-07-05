@@ -19,7 +19,7 @@ interface PublicProfile {
 }
 
 async function fetchPublicProfile(did: string): Promise<PublicProfile | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
 
   try {
     const res = await fetch(`${apiUrl}/profile/proof/${encodeURIComponent(did)}`, {
