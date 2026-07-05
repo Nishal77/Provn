@@ -1,6 +1,6 @@
 import { createPublicClient, createWalletClient, http, parseAbi, type Hash } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { polygon, polygonMumbai } from 'viem/chains'
+import { polygon, polygonAmoy } from 'viem/chains'
 
 // DIDRegistry ABI — only the functions the API needs to call
 const DID_REGISTRY_ABI = parseAbi([
@@ -38,7 +38,7 @@ interface AnchorResult {
 }
 
 export function createBlockchainService(config: BlockchainConfig) {
-  const chain = config.isMainnet ? polygon : polygonMumbai
+  const chain = config.isMainnet ? polygon : polygonAmoy
 
   const publicClient = createPublicClient({
     chain,

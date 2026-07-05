@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { mintServiceToken } from '@/lib/service-token'
 
-const API_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:3001'
+const API_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)

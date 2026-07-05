@@ -14,8 +14,8 @@ async function main() {
 
   if (balance === 0n) {
     console.error('\nERROR: Deployer wallet has 0 MATIC. Fund it before deploying.')
-    if (chainId === 80001) {
-      console.error('Mumbai faucet: https://faucet.polygon.technology/')
+    if (chainId === 80002) {
+      console.error('Amoy faucet: https://faucet.polygon.technology/')
     }
     process.exit(1)
   }
@@ -77,12 +77,12 @@ async function main() {
   // ── Post-deploy instructions ────────────────────────────────
   const envKey = chainId === 137
     ? 'POLYGON_DID_REGISTRY_ADDRESS'
-    : chainId === 80001
-      ? 'MUMBAI_DID_REGISTRY_ADDRESS'
+    : chainId === 80002
+      ? 'AMOY_DID_REGISTRY_ADDRESS'
       : 'DID_REGISTRY_ADDRESS'
 
-  const polygonscanBase = chainId === 80001
-    ? 'https://mumbai.polygonscan.com/address'
+  const polygonscanBase = chainId === 80002
+    ? 'https://amoy.polygonscan.com/address'
     : 'https://polygonscan.com/address'
 
   console.log('\n── Next steps ───────────────────────────────────')

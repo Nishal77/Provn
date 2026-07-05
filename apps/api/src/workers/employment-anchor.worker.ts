@@ -165,7 +165,7 @@ export function createEmploymentAnchorWorker(deps: {
         const isMainnet = env.NODE_ENV === 'production'
         const polygonscanUrl = isMainnet
           ? `https://polygonscan.com/tx/${txHash}`
-          : `https://mumbai.polygonscan.com/tx/${txHash}`
+          : `https://amoy.polygonscan.com/tx/${txHash}`
 
         await sendAnchorConfirmation({
           toEmail: candidateEmail,

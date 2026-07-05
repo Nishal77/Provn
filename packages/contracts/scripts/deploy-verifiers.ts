@@ -12,7 +12,7 @@
 //      with the values from the exported verificationKey.json files.
 //
 // Then run this script:
-//   pnpm --filter @attesta/contracts deploy:mumbai   (testnet)
+//   pnpm --filter @attesta/contracts deploy:amoy   (testnet)
 //   pnpm --filter @attesta/contracts deploy:polygon  (mainnet)
 
 import hre from 'hardhat'
