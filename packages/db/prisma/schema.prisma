@@ -75,6 +75,12 @@ model User {
   // Phase 9 — Stripe Connect (candidate payouts)
   stripeAccountId String? // Stripe Connect express account ID (acct_...)
 
+  // GDPR consent preferences (Article 7 — explicit consent)
+  consentAnalytics  Boolean @default(false)
+  consentMarketing  Boolean @default(false)
+  consentAiTraining Boolean @default(false)
+  consentUpdatedAt  DateTime?
+
   // Display info
   name     String?
   imageUrl String?

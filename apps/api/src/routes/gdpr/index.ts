@@ -13,6 +13,25 @@ import { authenticate } from '../../middleware/authenticate.js'
 import crypto from 'node:crypto'
 
 export async function gdprRoutes(app: FastifyInstance) {
+  // POST /gdpr/consent — Article 7: store explicit consent preferences
+  app.post('/gdpr/consent', { preHandler: [authenticate] }, async (req, reply) => {
+    const { analytics, marketing, aiTraining } = req.body as {
+      analytics?: boolean
+      marketing?: boolean
+      aiTraining?: boolean
+    }
+    await app.db.user.update({
+      where: { id: req.currentUser.sub },
+      data: {
+        ...(analytics !== undefined && { consentAnalytics: analytics }),
+        ...(marketing !== undefined && { consentMarketing: marketing }),
+        ...(aiTraining !== undefined && { consentAiTraining: aiTraining }),
+        consentUpdatedAt: new Date(),
+      },
+    })
+    return reply.send({ success: true })
+  })
+
   // GET /gdpr/export — Article 20 data portability
   app.get('/gdpr/export', { preHandler: [authenticate] }, async (req, reply) => {
     const userId = req.currentUser.sub
