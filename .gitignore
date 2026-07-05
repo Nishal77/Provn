@@ -54,3 +54,7 @@ pnpm-debug.log*
 .vercel
 ATTESTA_PRD_v1.pdf
 CLAUDE.md
+
+# Claude Code session files
+.claude/
+.claude-flow/
