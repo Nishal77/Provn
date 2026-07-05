@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify'
 import { createId } from '@paralleldrive/cuid2'
 import { authenticate } from '../../middleware/authenticate.js'
 import { createSkillService } from '../../services/skill.service.js'
+import { sendPeerAttestationRequest } from '../../services/email.service.js'
+import { env } from '../../config/env.js'
 
 export async function skillRoutes(app: FastifyInstance) {
   // POST /skills — submit an artifact for AI evaluation
@@ -122,7 +124,16 @@ export async function skillRoutes(app: FastifyInstance) {
       },
     })
 
-    // TODO: Send email to peerEmail with link: /skills/peer-attest/{token}
+    const requester = await app.db.user.findUnique({ where: { id: req.currentUser.sub }, select: { name: true } })
+    const attestUrl = `${env.WEB_URL}/skills/peer-attest/${token}`
+    await sendPeerAttestationRequest({
+      toEmail: peerEmail,
+      requesterName: requester?.name ?? 'A colleague',
+      skillSlug: attestation.skillSlug,
+      attestUrl,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    }).catch(() => {}) // non-fatal — row already created
+
     app.log.info({ peerEmail, attestationId: id }, 'Peer attestation request created')
 
     return reply.code(201).send({ success: true, data: { message: 'Request sent', peerEmail } })

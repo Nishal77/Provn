@@ -2,7 +2,7 @@ import { createHmac } from 'crypto'
 import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+const API_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
 
 /**
  * Mints a short-lived Fastify-compatible HS256 JWT for the given user.

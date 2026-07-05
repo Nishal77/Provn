@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+const API_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
 
 export async function GET(_req: Request, { params }: { params: { token: string } }) {
   const res = await fetch(`${API_URL}/employment/countersign/${params.token}`)

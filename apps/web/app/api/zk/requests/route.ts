@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ success: false }, { status: 401 })
   const user = session.user as { id: string; did?: string; kycTier?: string }
   const token = await mintToken(user.id, user.did ?? null, user.kycTier ?? 'T6_SELF')
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const role = req.nextUrl.searchParams.get('role') ?? ''
   const res = await fetch(`${apiUrl}/zk/requests${role ? `?role=${role}` : ''}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ success: false }, { status: 401 })
   const user = session.user as { id: string; did?: string; kycTier?: string }
   const token = await mintToken(user.id, user.did ?? null, user.kycTier ?? 'T6_SELF')
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const body = await req.json()
   const res = await fetch(`${apiUrl}/zk/request`, {
     method: 'POST',

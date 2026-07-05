@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const token = await new SignJWT({ sub: user.id, did: user.did ?? null, tier: user.kycTier ?? 'T6_SELF' })
     .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('60s')
     .sign(new TextEncoder().encode(secret))
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const body = await req.json()
   const res = await fetch(`${apiUrl}/trials/${params.id}/sign`, {
     method: 'POST',

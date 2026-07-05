@@ -6,7 +6,7 @@ import { SkillList } from '@/components/skills/skill-list'
 import type { SkillAttestation } from '@attesta/shared'
 
 async function fetchSkills(userId: string, did: string | null, tier: string): Promise<SkillAttestation[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const secret = process.env.JWT_ACCESS_SECRET
   if (!secret) return []
 

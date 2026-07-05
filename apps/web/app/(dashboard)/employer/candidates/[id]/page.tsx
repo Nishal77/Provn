@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 async function fetchProfile(did: string): Promise<Record<string, unknown> | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const res = await fetch(`${apiUrl}/protocol/profile/${encodeURIComponent(did)}`, { cache: 'no-store' })
   if (!res.ok) return null
   return res.json()

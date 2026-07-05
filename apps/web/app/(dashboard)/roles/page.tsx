@@ -6,7 +6,7 @@ import type { Role } from '@attesta/shared'
 import { ROLE_DOMAIN_LABELS } from '@attesta/shared'
 
 async function fetchRoles(token: string): Promise<(Role & { _count: { fitScores: number; hireOutcomes: number } })[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const res = await fetch(`${apiUrl}/roles`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',

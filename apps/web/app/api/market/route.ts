@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const token = await new SignJWT({ sub: user.id, did: user.did ?? null, tier: user.kycTier ?? 'T6_SELF' })
     .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('60s')
     .sign(new TextEncoder().encode(secret))
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const params = req.nextUrl.searchParams.toString()
   const res = await fetch(`${apiUrl}/market/compensation${params ? `?${params}` : ''}`, {
     headers: { Authorization: `Bearer ${token}` },

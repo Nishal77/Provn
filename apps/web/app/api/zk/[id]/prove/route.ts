@@ -19,7 +19,7 @@ export async function POST(
   if (!session?.user) return NextResponse.json({ success: false }, { status: 401 })
   const user = session.user as { id: string; did?: string; kycTier?: string }
   const token = await mintToken(user.id, user.did ?? null, user.kycTier ?? 'T6_SELF')
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const body = await req.json()
   const res = await fetch(`${apiUrl}/zk/requests/${params.id}/prove`, {
     method: 'POST',

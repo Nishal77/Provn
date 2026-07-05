@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const user = session.user as { id: string; did?: string; kycTier?: string }
   const token = await mintToken(user.id, user.did, user.kycTier)
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const res = await fetch(`${apiUrl}/trials/${params.id}/score`, {
     headers: { Authorization: `Bearer ${token}` },
   })

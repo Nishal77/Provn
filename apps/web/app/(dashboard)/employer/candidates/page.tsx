@@ -17,7 +17,7 @@ async function fetchCandidates(
   userId: string, did: string | null, tier: string,
   params: Record<string, string>
 ): Promise<CandidateSummary[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const secret = process.env.JWT_ACCESS_SECRET
   if (!secret) return []
   const token = await new SignJWT({ sub: userId, did, tier })

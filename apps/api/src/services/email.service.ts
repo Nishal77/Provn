@@ -128,3 +128,43 @@ export async function sendAnchorConfirmation(params: {
     `,
   })
 }
+
+export async function sendPeerAttestationRequest(params: {
+  toEmail: string
+  requesterName: string
+  skillSlug: string
+  attestUrl: string
+  expiresAt: Date
+}): Promise<void> {
+  const expiry = params.expiresAt.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  })
+
+  await sendEmail({
+    from: FROM,
+    to: params.toEmail,
+    subject: `${params.requesterName} asks you to co-sign a skill on ATTESTA`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+        <h2 style="margin-bottom:4px">Peer Skill Attestation Request</h2>
+        <p style="color:#444">
+          <strong>${params.requesterName}</strong> has listed you as someone who can vouch
+          for their <strong>${params.skillSlug}</strong> skill on ATTESTA.
+        </p>
+        <p style="color:#444">
+          Your co-signature adds a verified peer endorsement to their professional profile.
+          No ATTESTA account required — the link below takes you directly to the review.
+        </p>
+        <a href="${params.attestUrl}"
+           style="display:inline-block;padding:12px 28px;background:#6366f1;color:#fff;
+                  border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;
+                  margin:20px 0">
+          Review &amp; Co-Sign
+        </a>
+        <p style="color:#888;font-size:12px;margin-top:24px">
+          This link expires on ${expiry}. If you don't know this person, you can safely ignore this email.
+        </p>
+      </div>
+    `,
+  })
+}

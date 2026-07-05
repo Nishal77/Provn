@@ -5,7 +5,7 @@ import { EmploymentList } from '@/components/employment/employment-list'
 import type { EmploymentRecord } from '@attesta/shared'
 
 async function fetchEmploymentRecords(userId: string, did: string | null, tier: string): Promise<EmploymentRecord[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
 
   // Mint a short-lived service token server-side
   const { SignJWT } = await import('jose')

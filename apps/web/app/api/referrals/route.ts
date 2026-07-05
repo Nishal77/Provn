@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const user = session.user as { id: string; did?: string; kycTier?: string }
   const token = await mintToken(user.id, user.did, user.kycTier)
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const role = req.nextUrl.searchParams.get('role') ?? 'referrer'
   const res = await fetch(`${apiUrl}/referrals?role=${role}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const user = session.user as { id: string; did?: string; kycTier?: string }
   const token = await mintToken(user.id, user.did, user.kycTier)
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const body = await req.json()
   const res = await fetch(`${apiUrl}/referrals`, {
     method: 'POST',

@@ -7,7 +7,7 @@ import { ROLE_DOMAIN_LABELS } from '@attesta/shared'
 import type { RoleDomain } from '@attesta/shared'
 
 async function fetchBounties(token: string, domain?: string): Promise<(BountyListing & { role: { id: string; title: string; domain: string; remote: boolean } })[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const params = new URLSearchParams()
   if (domain) params.set('domain', domain)
   const res = await fetch(`${apiUrl}/bounties?${params.toString()}`, {

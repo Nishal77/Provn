@@ -5,7 +5,7 @@ import type { Trial } from '@attesta/shared'
 import { TRIAL_STATUS_LABELS, TRIAL_STATUS_COLORS, TRIAL_DOMAIN_LABELS } from '@attesta/shared'
 
 async function fetchEmployerTrials(token: string): Promise<Trial[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const res = await fetch(`${apiUrl}/trials?role=employer`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',

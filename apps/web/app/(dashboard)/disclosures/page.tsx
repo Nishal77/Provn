@@ -6,7 +6,7 @@ import type { ZKDisclosureRequest } from '@attesta/shared'
 import { ZK_STATUS_LABELS, ZK_STATUS_COLORS, formatClaimLabel } from '@attesta/shared'
 
 async function fetchDisclosures(userId: string, did: string | null, tier: string): Promise<ZKDisclosureRequest[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
   const secret = process.env.JWT_ACCESS_SECRET
   if (!secret) return []
   const token = await new SignJWT({ sub: userId, did, tier })

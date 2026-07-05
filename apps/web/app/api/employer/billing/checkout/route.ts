@@ -2,7 +2,7 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { SignJWT } from 'jose'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+const API_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
 
 async function mintServiceToken(userId: string, did: string | null, tier: string): Promise<string> {
   const secret = process.env.JWT_ACCESS_SECRET
