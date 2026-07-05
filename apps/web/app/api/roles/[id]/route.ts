@@ -9,15 +9,15 @@ async function mintToken(userId: string, did?: string, tier?: string) {
     .sign(new TextEncoder().encode(secret))
 }
 
+const API_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const user = session.user as { id: string; did?: string; kycTier?: string }
   const token = await mintToken(user.id, user.did, user.kycTier)
-  const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:4000'
-  // Fetch role detail — use the list endpoint and find by id for now
-  const res = await fetch(`${apiUrl}/roles`, { headers: { Authorization: `Bearer ${token}` } })
-  const data = await res.json()
-  const role = (data.roles ?? []).find((r: { id: string }) => r.id === params.id) ?? null
-  return NextResponse.json({ role }, { status: role ? 200 : 404 })
+  const res = await fetch(`${API_URL}/roles/${params.id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return NextResponse.json(await res.json(), { status: res.status })
 }

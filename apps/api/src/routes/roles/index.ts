@@ -37,6 +37,15 @@ export async function roleRoutes(app: FastifyInstance) {
     return reply.send({ roles })
   })
 
+  // GET /roles/:id — single role detail
+  app.get('/roles/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as never as { currentUser: { sub: string } }).currentUser
+    const { id } = req.params as { id: string }
+    const role = await app.db.role.findFirst({ where: { id, employerId: user.sub } })
+    if (!role) return reply.status(404).send({ error: 'Role not found' })
+    return reply.send({ role })
+  })
+
   // GET /roles/:id/matches — top-50 FitScore matches (anonymized in blind mode)
   app.get('/roles/:id/matches', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as never as { currentUser: { sub: string } }).currentUser
