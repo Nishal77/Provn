@@ -112,7 +112,10 @@ export function createEmploymentAnchorWorker(deps: {
       // ── Step 2: Anchor on Polygon via DIDRegistry ───────────────────────
       const candidateDid = record.candidate.did
       if (!candidateDid) {
-        throw new Error(`Candidate ${record.candidateId} has no DID — cannot anchor`)
+        // Candidate hasn't completed KYC — leave SIGNED, re-anchor when DID is assigned
+        console.warn(`[anchor-worker] Candidate ${record.candidateId} has no DID — skipping anchor, record stays SIGNED`)
+        await db.employmentRecord.update({ where: { id: recordId }, data: { status: 'SIGNED' } })
+        return
       }
 
       const rpcUrl = env.NODE_ENV === 'production'

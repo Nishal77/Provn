@@ -77,7 +77,12 @@ export function createSkillAnchorWorker(deps: { db: PrismaClient; redis: Redis }
 
       // ── Anchor on Polygon ────────────────────────────────────────────────
       const candidateDid = attestation.user.did
-      if (!candidateDid) throw new Error(`User ${attestation.userId} has no DID — cannot anchor`)
+      if (!candidateDid) {
+        // User hasn't completed KYC — leave SCORED, anchor will run when DID is assigned
+        console.warn(`[skill-anchor] User ${attestation.userId} has no DID — skipping anchor, attestation stays SCORED`)
+        await db.skillAttestation.update({ where: { id: attestationId }, data: { status: 'SCORED' } })
+        return
+      }
 
       const rpcUrl = env.NODE_ENV === 'production'
         ? (env.POLYGON_RPC_URL ?? '')

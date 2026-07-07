@@ -30,7 +30,7 @@ export const profileService = {
     // First-time access: create profile + assign DID
     // Use did:polygon if wallet address present (Phase 3+), else did:attesta (Phase 2 temp)
     if (!user.profile) {
-      const did = didService.resolveForUser(userId, (user as any).polygonAddress)
+      const did = didService.resolveForUser(userId, user.polygonAddress)
       const [profile] = await db.$transaction([
         db.profile.create({
           data: { userId, completenessScore: 0 },
@@ -46,9 +46,9 @@ export const profileService = {
     // Upgrade existing did:attesta → did:polygon if wallet was added after initial signup
     if (
       user.did?.startsWith('did:attesta:') &&
-      (user as any).polygonAddress
+      user.polygonAddress
     ) {
-      const newDid = didService.generateFromWallet((user as any).polygonAddress)
+      const newDid = didService.generateFromWallet(user.polygonAddress)
       await db.user.update({ where: { id: userId }, data: { did: newDid } })
       return { user: { ...user, did: newDid }, profile: user.profile }
     }
@@ -192,7 +192,15 @@ export const profileService = {
       imageUrl: user.imageUrl,
       kycTier: user.kycTier,
       memberSince: user.createdAt,
-      profile: user.profile,
+      // Flatten profile fields so callers get a single-level object
+      headline: user.profile.headline,
+      bio: user.profile.bio,
+      location: user.profile.location,
+      websiteUrl: user.profile.websiteUrl,
+      linkedinUrl: user.profile.linkedinUrl,
+      githubConnected: !!user.profile.githubUsername,
+      completenessScore: Number(user.profile.completenessScore ?? 0),
+      overallTrustScore: Number(user.profile.overallTrustScore ?? 0),
       ipfsUrl: user.profile.ipfsCid
         ? ipfsService.gatewayUrl(user.profile.ipfsCid)
         : null,
