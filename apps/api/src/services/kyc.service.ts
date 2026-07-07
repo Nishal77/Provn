@@ -168,6 +168,15 @@ export function createKycService(deps: KycServiceDeps) {
 
     // ── Approved — upgrade to T1 Government ──
 
+    if (!user.polygonAddress) {
+      // Wallet not yet created — mark approved but skip on-chain anchor
+      await db.user.update({
+        where: { id: user.id },
+        data: { kycTier: 'T1_GOVERNMENT', kycStatus: 'APPROVED' },
+      })
+      return
+    }
+
     const did = `did:polygon:${user.polygonAddress}`
 
     const rawCid = await ipfs.pinProfile({
@@ -201,9 +210,16 @@ export function createKycService(deps: KycServiceDeps) {
         where: { id: user.id },
         data: { kycTier: 'T1_GOVERNMENT', kycStatus: 'APPROVED', did },
       }),
-      db.profile.update({
+      db.profile.upsert({
         where: { userId: user.id },
-        data: {
+        create: {
+          userId: user.id,
+          did,
+          ipfsCid: documentCid,
+          overallTrustScore: 10,
+          chainTxHash,
+        },
+        update: {
           did,
           ipfsCid: documentCid,
           overallTrustScore: 10,
