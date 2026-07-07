@@ -68,9 +68,8 @@ model User {
   facetecSessionId  String?   // FaceTec session ID after successful liveness check
   facetecVerifiedAt DateTime? // Timestamp of liveness pass — gates Onfido doc check
 
-  // Phase 3 — Onfido government ID verification (Step 2 of KYC — document only)
-  onfidoApplicantId String? // Onfido applicant record ID (no PII stored here)
-  onfidoCheckId     String? // Onfido check ID, used to reconcile webhook events
+  // Phase 3 — Veriff government ID verification (Step 2 of KYC — document + selfie)
+  veriffSessionId   String? // Veriff session ID, used to reconcile webhook decisions
 
   // Phase 9 — Stripe Connect (candidate payouts)
   stripeAccountId String? // Stripe Connect express account ID (acct_...)

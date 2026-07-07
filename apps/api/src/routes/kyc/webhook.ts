@@ -7,27 +7,21 @@ import { env } from '../../config/env.js'
 /**
  * POST /kyc/webhook
  *
- * Onfido calls this when a check completes. We verify the HMAC-SHA256
- * signature before processing — any request without a valid sig is
- * dropped with 401 immediately.
- *
- * This route reads the raw body (not parsed JSON) so the signature
- * check runs against the exact bytes Onfido signed.
+ * Veriff calls this when a decision is made. We verify the HMAC-SHA256
+ * signature (X-HMAC-SIGNATURE header) before processing.
+ * Raw body required for correct signature verification.
  */
 export async function webhookRoute(app: FastifyInstance) {
   app.post(
     '/kyc/webhook',
     {
-      config: {
-        // Skip body parsing — we need raw bytes for signature verification
-        rawBody: true,
-      },
+      config: { rawBody: true },
     },
     async (req, reply) => {
-      const signature = req.headers['x-sha2-signature']
+      const signature = req.headers['x-hmac-signature']
 
       if (!signature || typeof signature !== 'string') {
-        return reply.code(401).send({ error: 'Missing signature header' })
+        return reply.code(401).send({ error: 'Missing X-HMAC-SIGNATURE header' })
       }
 
       const rawBody = (req as { rawBody?: string }).rawBody
@@ -36,9 +30,9 @@ export async function webhookRoute(app: FastifyInstance) {
         return reply.code(400).send({ error: 'Missing body' })
       }
 
-      if (!env.ONFIDO_API_TOKEN || !env.ONFIDO_WEBHOOK_SECRET) {
-        app.log.error('Onfido webhook received but KYC service not configured')
-        return reply.code(200).send({ received: true }) // ACK to prevent retries
+      if (!env.VERIFF_API_KEY || !env.VERIFF_PRIVATE_KEY) {
+        app.log.error('Veriff webhook received but KYC service not configured')
+        return reply.code(200).send({ received: true })
       }
 
       const kycService = createKycService({
@@ -50,8 +44,8 @@ export async function webhookRoute(app: FastifyInstance) {
           isMainnet: env.NODE_ENV === 'production',
         }),
         ipfs: createIpfsService({ pinataJwt: env.PINATA_JWT }),
-        onfidoApiToken: env.ONFIDO_API_TOKEN,
-        webhookSecret: env.ONFIDO_WEBHOOK_SECRET,
+        veriffApiKey: env.VERIFF_API_KEY,
+        veriffPrivateKey: env.VERIFF_PRIVATE_KEY,
         contractAddress: env.DID_REGISTRY_ADDRESS ?? '',
       })
 
@@ -62,11 +56,11 @@ export async function webhookRoute(app: FastifyInstance) {
         const message = err instanceof Error ? err.message : String(err)
 
         if (message === 'Invalid webhook signature') {
-          app.log.warn({ signature }, 'Rejected Onfido webhook — invalid signature')
+          app.log.warn({ signature }, 'Rejected Veriff webhook — invalid signature')
           return reply.code(401).send({ error: 'Invalid signature' })
         }
 
-        app.log.error({ err }, 'Onfido webhook processing failed')
+        app.log.error({ err }, 'Veriff webhook processing failed')
         return reply.code(500).send({ error: 'Internal processing error' })
       }
     }

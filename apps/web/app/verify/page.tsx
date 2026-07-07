@@ -5,55 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@attesta/ui'
 
-/**
- * /verify — Government ID verification landing page.
- *
- * Initiates the Onfido KYC flow by calling POST /kyc/initiate, which
- * returns an SDK token. We then redirect the user to /verify/liveness
- * where the Onfido Web SDK is loaded with that token.
- *
- * This page does NOT render the Onfido SDK itself — Onfido's SDK is
- * loaded lazily in /verify/liveness to keep the initial page lightweight
- * and to avoid loading third-party scripts on every page load.
- */
 export default function VerifyPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  async function startVerification() {
+  function startVerification() {
     setLoading(true)
-    setError(null)
-
-    try {
-      const res = await fetch('/api/kyc/initiate', { method: 'POST' })
-      const data = await res.json()
-
-      if (!res.ok) {
-        const code = data?.error?.code
-        if (code === 'ALREADY_VERIFIED') {
-          router.push('/dashboard')
-          return
-        }
-        if (code === 'VERIFICATION_PENDING') {
-          // Already started — resume the flow
-          router.push('/verify/liveness')
-          return
-        }
-        setError(data?.error?.message ?? 'Could not start verification. Please try again.')
-        return
-      }
-
-      // Store the SDK token in sessionStorage so liveness page can use it
-      sessionStorage.setItem('onfido_sdk_token', data.data.sdkToken)
-      sessionStorage.setItem('onfido_applicant_id', data.data.applicantId)
-
-      router.push('/verify/liveness')
-    } catch {
-      setError('Network error. Please check your connection and try again.')
-    } finally {
-      setLoading(false)
-    }
+    router.push('/verify/liveness')
   }
 
   return (
@@ -70,7 +28,7 @@ export default function VerifyPage() {
           <CardHeader>
             <CardTitle className="text-lg">What we verify</CardTitle>
             <CardDescription>
-              Powered by Onfido — your document images are never stored by ATTESTA.
+              Powered by Veriff — your document images are never stored by ATTESTA.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -80,8 +38,8 @@ export default function VerifyPage() {
                   1
                 </span>
                 <span>
-                  <strong className="text-foreground">Government ID</strong> — passport, driver's
-                  license, or national ID card
+                  <strong className="text-foreground">3D liveness check</strong> — confirms you are
+                  a real person (prevents deepfakes and Sybil attacks)
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -89,8 +47,8 @@ export default function VerifyPage() {
                   2
                 </span>
                 <span>
-                  <strong className="text-foreground">Liveness check</strong> — a brief selfie to
-                  confirm you're a real person (prevents deepfakes)
+                  <strong className="text-foreground">Government ID</strong> — passport,
+                  driver&apos;s license, or national ID card (via Veriff)
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -104,18 +62,12 @@ export default function VerifyPage() {
               </li>
             </ul>
 
-            {error && (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-
             <button
               onClick={startVerification}
               disabled={loading}
               className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? 'Starting verification…' : 'Start identity verification'}
+              {loading ? 'Starting…' : 'Start identity verification'}
             </button>
 
             <p className="text-center text-xs text-muted-foreground">
@@ -128,14 +80,14 @@ export default function VerifyPage() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground">
-          Your verification data is processed by Onfido under their{' '}
+          Document verification is processed by Veriff under their{' '}
           <a
-            href="https://onfido.com/privacy"
+            href="https://www.veriff.com/privacy-notice"
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 hover:text-foreground"
           >
-            Privacy Policy
+            Privacy Notice
           </a>
           . ATTESTA receives only the pass/fail result.
         </p>

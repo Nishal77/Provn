@@ -26,9 +26,9 @@ const envSchema = z.object({
   FACETEC_DEVICE_KEY_IDENTIFIER: z.string().optional(),
   FACETEC_FACE_SCAN_ENCRYPTION_KEY: z.string().optional(), // RSA public key PEM
 
-  // Phase 3 — Onfido government ID verification (Step 2 — document only)
-  ONFIDO_API_TOKEN: z.string().optional(),
-  ONFIDO_WEBHOOK_SECRET: z.string().optional(),
+  // Phase 3 — Veriff government ID verification (Step 2 — document + selfie)
+  VERIFF_API_KEY: z.string().optional(),      // Veriff API key (public) — console.veriff.com
+  VERIFF_PRIVATE_KEY: z.string().optional(),  // Veriff private key (for HMAC signing)
 
   // Phase 3 — Polygon blockchain (use Alchemy: alchemy.com → Create App → Polygon)
   // Format: https://polygon-mainnet.g.alchemy.com/v2/<key>

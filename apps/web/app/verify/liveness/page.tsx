@@ -8,19 +8,11 @@ type Phase =
   | 'facetec-ready'     // FaceTec UI is mounted, waiting for user
   | 'facetec-polling'   // FaceTec captured, validating with server
   | 'facetec-error'     // FaceTec failed
-  | 'onfido-loading'    // FaceTec passed, loading Onfido SDK
-  | 'onfido-ready'      // Onfido document UI is mounted
-  | 'onfido-polling'    // Onfido captured, waiting for webhook result
+  | 'veriff-loading'    // FaceTec passed, creating Veriff session
+  | 'veriff-redirect'   // redirected to Veriff-hosted page
+  | 'veriff-polling'    // waiting for Veriff webhook decision
   | 'complete'          // T1 verified
   | 'error'
-
-// ─────────────────────────────────────────────
-// FaceTec Processor
-//
-// FaceTec's SDK calls processSessionResultWhileFaceTecSDKWaits() with the
-// encrypted faceScan data. We forward it to our backend for validation,
-// then signal the SDK whether to proceed or cancel.
-// ─────────────────────────────────────────────
 
 function buildFaceTecProcessor(
   onSuccess: (sessionId: string) => void,
@@ -29,7 +21,6 @@ function buildFaceTecProcessor(
   return class FaceTecProcessor {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async processSessionResultWhileFaceTecSDKWaits(sessionResult: any, sdkNextStep: any) {
-      // Status 1 = FACE_SCAN_GOOD — anything else means user cancelled or low quality
       if (sessionResult.status !== 1) {
         onFailure('Session ended without a valid face scan.')
         sdkNextStep.cancel()
@@ -61,7 +52,6 @@ function buildFaceTecProcessor(
           return
         }
 
-        // Tell the SDK to show a success animation, then close
         onSuccess(data.data.sessionId)
         sdkNextStep.proceedToNextStep(sessionResult.faceScanResultBlob)
       } catch {
@@ -72,26 +62,20 @@ function buildFaceTecProcessor(
   }
 }
 
-// ─────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────
-
 export default function LivenessPage() {
   const router = useRouter()
   const facetecMountRef = useRef<HTMLDivElement>(null)
-  const onfidoMountRef = useRef<HTMLDivElement>(null)
-  const onfidoInstanceRef = useRef<{ tearDown: () => void } | null>(null)
 
   const [phase, setPhase] = useState<Phase>('facetec-loading')
   const [message, setMessage] = useState('Loading 3D liveness check…')
 
-  // ── Step 2: Poll Onfido webhook result ─────────────────────────
+  // ── Step 2b: Poll for T1 approval ─────────────────────────────
   const pollForT1 = useCallback(async () => {
-    setPhase('onfido-polling')
-    setMessage('Verifying identity document…')
+    setPhase('veriff-polling')
+    setMessage('Waiting for document verification result…')
 
-    const MAX_POLLS = 20
-    const INTERVAL_MS = 3_000
+    const MAX_POLLS = 30
+    const INTERVAL_MS = 4_000
 
     for (let i = 0; i < MAX_POLLS; i++) {
       await new Promise((r) => setTimeout(r, INTERVAL_MS))
@@ -119,19 +103,16 @@ export default function LivenessPage() {
       }
     }
 
-    // Webhook may still be in flight
     setPhase('complete')
-    setMessage('Document submitted. Verification usually takes under a minute.')
+    setMessage('Document submitted. Verification usually completes within a few minutes.')
     router.push('/dashboard')
   }, [router])
 
-  // ── Step 2: Load Onfido document SDK ──────────────────────────
-  const startOnfidoDocumentCheck = useCallback(async () => {
-    setPhase('onfido-loading')
-    setMessage('Loading document scanner…')
+  // ── Step 2a: Create Veriff session → open in new tab ──────────
+  const startVeriffDocumentCheck = useCallback(async () => {
+    setPhase('veriff-loading')
+    setMessage('Creating document verification session…')
 
-    // Retrieve Onfido SDK token from our backend
-    let sdkToken: string
     try {
       const res = await fetch('/api/kyc/initiate', { method: 'POST' })
       const data = await res.json()
@@ -147,66 +128,20 @@ export default function LivenessPage() {
         return
       }
 
-      sdkToken = data.data.sdkToken
+      const { verificationUrl } = data.data as { verificationUrl: string; sessionId: string }
+
+      // Open Veriff in a new tab — no SDK download needed
+      window.open(verificationUrl, '_blank', 'noopener,noreferrer')
+
+      setPhase('veriff-redirect')
+      setMessage('Document verification opened in a new tab. Complete the steps there, then return here.')
+
+      // Start polling once user has been redirected
+      setTimeout(pollForT1, 5_000)
     } catch {
       setPhase('error')
       setMessage('Network error. Please check your connection and try again.')
-      return
     }
-
-    // Dynamically load Onfido SDK — document step only, no face step
-    const script = document.createElement('script')
-    script.src = 'https://assets.onfido.com/web-sdk-releases/14.15.0/onfido.min.js'
-    script.async = true
-
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = 'https://assets.onfido.com/web-sdk-releases/14.15.0/style.css'
-
-    script.onload = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const Onfido = (window as any).Onfido
-
-      if (!Onfido?.init) {
-        setPhase('error')
-        setMessage('Could not load document scanner. Please refresh and try again.')
-        return
-      }
-
-      try {
-        onfidoInstanceRef.current = Onfido.init({
-          token: sdkToken,
-          containerId: 'onfido-mount',
-          // 'face' step intentionally omitted — FaceTec 3D handled liveness in Step 1
-          steps: ['welcome', 'document', 'complete'],
-          onComplete: () => {
-            onfidoInstanceRef.current?.tearDown()
-            pollForT1()
-          },
-          onError: () => {
-            setPhase('error')
-            setMessage('Document capture failed. Please try again.')
-          },
-          onUserExit: () => {
-            router.push('/verify')
-          },
-        })
-
-        setPhase('onfido-ready')
-        setMessage('')
-      } catch {
-        setPhase('error')
-        setMessage('Could not start document scanner. Please refresh and try again.')
-      }
-    }
-
-    script.onerror = () => {
-      setPhase('error')
-      setMessage('Could not load document scanner. Please check your connection.')
-    }
-
-    document.head.appendChild(link)
-    document.head.appendChild(script)
   }, [router, pollForT1])
 
   // ── Step 1: Load FaceTec 3D liveness SDK ──────────────────────
@@ -215,13 +150,12 @@ export default function LivenessPage() {
     const faceScanEncryptionKey = process.env.NEXT_PUBLIC_FACETEC_FACE_SCAN_ENCRYPTION_KEY
 
     if (!deviceKeyIdentifier || !faceScanEncryptionKey) {
-      setPhase('error')
-      setMessage('Liveness service not configured. Please contact support.')
+      // FaceTec not configured — skip liveness, go straight to Veriff
+      setPhase('facetec-polling')
+      setMessage('Loading document scanner…')
       return
     }
 
-    // FaceTec SDK is self-hosted — place SDK files in public/facetec/ after licensing.
-    // Download from: https://dev.facetec.com/downloads (requires FaceTec account)
     const sdkPath = process.env.NEXT_PUBLIC_FACETEC_SDK_PATH ?? '/facetec'
     const script = document.createElement('script')
     script.src = `${sdkPath}/FaceTecSDK.js`
@@ -237,7 +171,6 @@ export default function LivenessPage() {
         return
       }
 
-      // Fetch a session token from our backend (which calls FaceTec server)
       let sessionToken: string
       try {
         const res = await fetch('/api/kyc/facetec/session')
@@ -261,7 +194,6 @@ export default function LivenessPage() {
         return
       }
 
-      // Initialize FaceTec SDK — runs entirely client-side
       FaceTecSDK.initializeInDevelopmentMode(
         deviceKeyIdentifier,
         faceScanEncryptionKey,
@@ -275,14 +207,11 @@ export default function LivenessPage() {
           setPhase('facetec-ready')
           setMessage('')
 
-          // Build processor and launch a liveness session
           const Processor = buildFaceTecProcessor(
-            // onSuccess: FaceTec liveness passed → move to Onfido doc check
             (_sessionId: string) => {
               setPhase('facetec-polling')
               setMessage('Liveness confirmed. Loading document scanner…')
             },
-            // onFailure
             (reason: string) => {
               setPhase('facetec-error')
               setMessage(reason)
@@ -290,14 +219,10 @@ export default function LivenessPage() {
           )
 
           const processor = new Processor()
-          // FaceTec's SDK calls processor.processSessionResultWhileFaceTecSDKWaits
-          // when a scan is captured. On the SDK's onComplete callback, move to Onfido.
           FaceTecSDK.FaceTecSession(processor, sessionToken, {
             onComplete: () => {
-              // SDK UI is done — if liveness passed, the processor set phase to polling
-              // We now start the Onfido doc check
               if (phase !== 'facetec-error') {
-                startOnfidoDocumentCheck()
+                startVeriffDocumentCheck()
               }
             },
           })
@@ -307,112 +232,94 @@ export default function LivenessPage() {
 
     script.onerror = () => {
       setPhase('facetec-error')
-      setMessage('Could not load liveness SDK. If you placed SDK files in public/facetec/, check the path.')
+      setMessage('Could not load liveness SDK. Check public/facetec/ files.')
     }
 
     document.head.appendChild(script)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // After FaceTec polling phase sets success, kick off Onfido
+  // After FaceTec polling phase, start Veriff
   useEffect(() => {
     if (phase === 'facetec-polling') {
-      const timer = setTimeout(startOnfidoDocumentCheck, 1_500)
+      const timer = setTimeout(startVeriffDocumentCheck, 1_500)
       return () => clearTimeout(timer)
     }
     return undefined
-  }, [phase, startOnfidoDocumentCheck])
-
-  // Cleanup Onfido on unmount
-  useEffect(() => {
-    return () => { onfidoInstanceRef.current?.tearDown() }
-  }, [])
-
-  // ─────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────
+  }, [phase, startVeriffDocumentCheck])
 
   const stepLabel = phase.startsWith('facetec') ? 'Step 1 of 2 — 3D Liveness' : 'Step 2 of 2 — Document'
-  const isLoading = phase === 'facetec-loading' || phase === 'facetec-polling' || phase === 'onfido-loading' || phase === 'onfido-polling'
+  const isLoading = ['facetec-loading', 'facetec-polling', 'veriff-loading', 'veriff-polling'].includes(phase)
   const isError = phase === 'facetec-error' || phase === 'error'
   const isDone = phase === 'complete'
-  const isSdkActive = phase === 'facetec-ready' || phase === 'onfido-ready'
+  const isWaitingForVeriff = phase === 'veriff-redirect'
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-background px-4 py-12">
-      {/* Step indicator */}
       {!isDone && (
         <div className="mb-8 flex items-center gap-3">
           <StepDot
             label="3D Liveness"
             number={1}
             active={phase.startsWith('facetec')}
-            done={phase.startsWith('onfido') || isDone}
+            done={phase.startsWith('veriff') || isDone}
           />
           <div className="h-px w-12 bg-border" />
           <StepDot
             label="Document"
             number={2}
-            active={phase.startsWith('onfido')}
+            active={phase.startsWith('veriff')}
             done={isDone}
           />
         </div>
       )}
 
-      {/* Status overlay */}
-      {!isSdkActive && (
-        <div className="mb-8 flex flex-col items-center gap-4 text-center">
-          {isLoading && (
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-          )}
-          {isDone && (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
-              <CheckIcon />
-            </div>
-          )}
-          {isError && (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-              <XIcon />
-            </div>
-          )}
+      <div className="mb-8 flex flex-col items-center gap-4 text-center">
+        {isLoading && (
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+        )}
+        {isDone && (
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+            <CheckIcon />
+          </div>
+        )}
+        {isError && (
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <XIcon />
+          </div>
+        )}
 
-          {!isSdkActive && (
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {stepLabel}
-            </p>
-          )}
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {stepLabel}
+        </p>
 
-          {message && (
-            <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
-          )}
+        {message && (
+          <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
+        )}
 
-          {isError && (
-            <button
-              onClick={() => router.push('/verify')}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              Try again
-            </button>
-          )}
-        </div>
-      )}
+        {isWaitingForVeriff && (
+          <button
+            onClick={pollForT1}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            I&apos;ve completed verification
+          </button>
+        )}
 
-      {/* FaceTec mounts itself into a full-screen overlay — no div needed */}
-      {/* Onfido document SDK mount point */}
-      <div
-        id="onfido-mount"
-        ref={onfidoMountRef}
-        className="w-full max-w-xl"
-      />
-      {/* Unused ref kept for potential future direct DOM access */}
+        {isError && (
+          <button
+            onClick={() => router.push('/verify')}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Try again
+          </button>
+        )}
+      </div>
+
       <div ref={facetecMountRef} className="hidden" />
     </div>
   )
 }
-
-// ─────────────────────────────────────────────
-// Sub-components
-// ─────────────────────────────────────────────
 
 function StepDot({ number, label, active, done }: { number: number; label: string; active: boolean; done: boolean }) {
   return (

@@ -37,7 +37,7 @@ export async function initiateRoute(app: FastifyInstance) {
         })
       }
 
-      if (!env.ONFIDO_API_TOKEN || !env.ONFIDO_WEBHOOK_SECRET) {
+      if (!env.VERIFF_API_KEY || !env.VERIFF_PRIVATE_KEY) {
         return reply.code(503).send({
           success: false,
           error: { code: 'NOT_CONFIGURED', message: 'KYC service not configured.' },
@@ -53,17 +53,17 @@ export async function initiateRoute(app: FastifyInstance) {
           isMainnet: env.NODE_ENV === 'production',
         }),
         ipfs: createIpfsService({ pinataJwt: env.PINATA_JWT }),
-        onfidoApiToken: env.ONFIDO_API_TOKEN,
-        webhookSecret: env.ONFIDO_WEBHOOK_SECRET,
+        veriffApiKey: env.VERIFF_API_KEY,
+        veriffPrivateKey: env.VERIFF_PRIVATE_KEY,
         contractAddress: env.DID_REGISTRY_ADDRESS ?? '',
       })
 
       try {
-        const { sdkToken, applicantId } = await kycService.initiateKyc(userId)
+        const { verificationUrl, sessionId } = await kycService.initiateKyc(userId)
 
         return reply.send({
           success: true,
-          data: { sdkToken, applicantId },
+          data: { verificationUrl, sessionId },
         })
       } catch (err) {
         const error = err as Error & { code?: string }
@@ -81,7 +81,7 @@ export async function initiateRoute(app: FastifyInstance) {
         app.log.error({ err, userId }, 'KYC initiation failed')
         return reply.code(502).send({
           success: false,
-          error: { code: 'ONFIDO_ERROR', message: 'Identity verification service unavailable. Please try again.' },
+          error: { code: 'VERIFF_ERROR', message: 'Identity verification service unavailable. Please try again.' },
         })
       }
     }
