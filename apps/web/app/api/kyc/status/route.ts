@@ -29,7 +29,7 @@ function mintServiceToken(userId: string): string {
  * GET /api/kyc/status
  *
  * Proxies to Fastify GET /kyc/status. The liveness page polls this to
- * detect when the Onfido webhook has promoted the user to T1_GOVERNMENT.
+ * detect when the Veriff webhook has promoted the user to T1_GOVERNMENT.
  */
 export async function GET() {
   const session = await auth()

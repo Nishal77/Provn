@@ -8,7 +8,7 @@
  * Sharing from this package ensures they never drift out of sync.
  */
 export enum VerificationTier {
-  T1_GOVERNMENT = 'T1_GOVERNMENT', // 10/10 — Govt ID via Onfido ZK
+  T1_GOVERNMENT = 'T1_GOVERNMENT', // 10/10 — Govt ID via Veriff
   T2_EMPLOYER = 'T2_EMPLOYER', // 9/10  — Employer co-signed on Polygon
   T3_INSTITUTION = 'T3_INSTITUTION', // 8/10  — University / institution
   T4_PEER = 'T4_PEER', // 6/10  — Peer co-attested

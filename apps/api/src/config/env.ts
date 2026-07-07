@@ -42,7 +42,7 @@ const envSchema = z.object({
   POLYGON_DID_REGISTRY_ADDRESS: z.string().optional(), // mainnet — set after deploy:polygon
   POLYGONSCAN_API_KEY: z.string().optional(),          // for contract source verification
 
-  // Frontend origin (used by Onfido SDK token referrer)
+  // Frontend origin (used by Veriff callback URL)
   WEB_URL: z.string().url().default('http://localhost:3000'),
 
   // Phase 5 — Resend transactional email (co-sign requests, anchor confirmations)

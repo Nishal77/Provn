@@ -2,7 +2,7 @@
 // PostgreSQL 16 via Prisma 5.x
 //
 // Verification Tiers (highest → lowest trust):
-//   T1 Government  10/10  Onfido ZK government ID (Phase 3)
+//   T1 Government  10/10  Veriff government ID (Phase 3)
 //   T2 Employer     9/10  Employer co-signed on Polygon (Phase 5)
 //   T3 Institution  8/10  University / institution (Phase 12)
 //   T4 Peer         6/10  Peer co-attested (Phase 6)
@@ -66,7 +66,7 @@ model User {
 
   // Phase 3 — FaceTec 3D liveness (ISO 30107-3, Step 1 of KYC)
   facetecSessionId  String?   // FaceTec session ID after successful liveness check
-  facetecVerifiedAt DateTime? // Timestamp of liveness pass — gates Onfido doc check
+  facetecVerifiedAt DateTime? // Timestamp of liveness pass — gates Veriff doc check
 
   // Phase 3 — Veriff government ID verification (Step 2 of KYC — document + selfie)
   veriffSessionId   String? // Veriff session ID, used to reconcile webhook decisions

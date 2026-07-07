@@ -18,7 +18,7 @@ const bodySchema = z.object({
  * The SDK passes the encrypted faceScan data here; we forward it to
  * FaceTec's server for cryptographic validation.
  *
- * On success: stamps user.facetecVerifiedAt — this gates the Onfido
+ * On success: stamps user.facetecVerifiedAt — this gates the Veriff
  * document check in POST /kyc/initiate.
  *
  * FaceTec data is never stored — only the pass/fail timestamp.
@@ -87,7 +87,7 @@ export async function facetecValidateRoute(app: FastifyInstance) {
           })
         }
 
-        // Stamp the verified timestamp — this gates the Onfido doc check
+        // Stamp the verified timestamp — this gates the Veriff doc check
         await app.db.user.update({
           where: { id: userId },
           data: {

@@ -67,7 +67,7 @@ const issuers = await client.listIssuers({ type: 'university' })
 
 | Tier | Source | Trust Score |
 |------|--------|-------------|
-| T1 | Government ID (Onfido ZK) | 10/10 |
+| T1 | Government ID (Veriff) | 10/10 |
 | T2 | Employer co-sign (on-chain) | 9/10 |
 | T3 | Institution (university) | 8/10 |
 | T4 | Peer attestation | 6/10 |

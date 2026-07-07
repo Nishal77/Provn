@@ -39,7 +39,7 @@ export async function buildApp() {
   await app.register(corsPlugin)
   await app.register(cookiePlugin)
 
-  // Raw body access — needed for HMAC signature verification on Onfido webhooks.
+  // Raw body access — needed for HMAC signature verification on Veriff webhooks.
   // Must be registered before any route that reads req.rawBody.
   await app.register(fastifyRawBody, { field: 'rawBody', global: false, encoding: 'utf8' })
 

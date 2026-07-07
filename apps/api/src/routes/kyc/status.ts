@@ -5,7 +5,7 @@ import { authenticate } from '../../middleware/authenticate.js'
  * GET /kyc/status
  *
  * Returns the current KYC tier and status for the authenticated user.
- * The frontend polls this after the Onfido SDK completes to know when
+ * The frontend polls this after the Veriff flow completes to know when
  * the webhook has been processed and the tier has been upgraded.
  */
 export async function statusRoute(app: FastifyInstance) {
