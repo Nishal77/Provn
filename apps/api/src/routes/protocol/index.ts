@@ -14,6 +14,8 @@
 //   GET  /protocol/linkedin/:username — lookup by LinkedIn username (extension)
 
 import type { FastifyInstance } from 'fastify'
+import { createPublicClient, http, parseAbi } from 'viem'
+import { polygon, polygonAmoy } from 'viem/chains'
 import { env } from '../../config/env.js'
 import { authenticate } from '../../middleware/authenticate.js'
 import {
@@ -172,8 +174,34 @@ export async function protocolRoutes(app: FastifyInstance) {
         return reply.send({ valid: true, note: 'Verifier contract not deployed — dev mode' })
       }
 
-      // Call on-chain verifier (reuse blockchain service pattern)
-      return reply.send({ valid: false, error: 'On-chain ZK verify not wired to protocol route yet' })
+      try {
+        const chain = env.NODE_ENV === 'production' ? polygon : polygonAmoy
+        const rpcUrl = env.NODE_ENV === 'production'
+          ? (env.POLYGON_RPC_URL ?? 'https://polygon-rpc.com')
+          : (env.AMOY_RPC_URL ?? 'https://rpc-amoy.polygon.technology')
+
+        const publicClient = createPublicClient({ chain, transport: http(rpcUrl) })
+        const abi = parseAbi([
+          'function verifyProof(uint256[2] a, uint256[2][2] b, uint256[2] c, uint256[] input) view returns (bool)',
+        ])
+        const { pi_a, pi_b, pi_c } = body.proof!
+        const signals = body.publicSignals!.map(s => BigInt(s))
+
+        const valid = await publicClient.readContract({
+          address: verifierAddress as `0x${string}`,
+          abi,
+          functionName: 'verifyProof',
+          args: [
+            [BigInt(pi_a[0]!), BigInt(pi_a[1]!)],
+            [[BigInt(pi_b[0]![0]!), BigInt(pi_b[0]![1]!)], [BigInt(pi_b[1]![0]!), BigInt(pi_b[1]![1]!)]],
+            [BigInt(pi_c[0]!), BigInt(pi_c[1]!)],
+            signals,
+          ],
+        })
+        return reply.send({ valid: Boolean(valid) })
+      } catch (err) {
+        return reply.code(500).send({ valid: false, error: 'On-chain ZK verification failed', details: String(err) })
+      }
     }
 
     return reply.code(400).send({ error: 'Invalid verify request' })

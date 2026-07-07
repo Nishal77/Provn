@@ -138,6 +138,7 @@ export async function gdprRoutes(app: FastifyInstance) {
           imageUrl: null,
           facetecSessionId: null,
           facetecVerifiedAt: null,
+          veriffSessionId: null,
           kycStatus: 'ERASED',
         },
       }),
