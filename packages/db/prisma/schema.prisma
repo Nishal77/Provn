@@ -32,14 +32,6 @@ enum VerificationTier {
   T6_SELF // Default for new users
 }
 
-// Auth providers — keep in sync with @attesta/shared AuthProvider enum
-enum AuthProvider {
-  EMAIL
-  GOOGLE
-  GITHUB
-  SIWE // Sign-In With Ethereum
-}
-
 // ─────────────────────────────────────────────────────────────
 // Core Identity
 // ─────────────────────────────────────────────────────────────
@@ -107,8 +99,8 @@ model Account {
   id     String @id @default(cuid())
   userId String
 
-  type              String       // "oauth" | "credentials" | "siwe"
-  provider          AuthProvider
+  type              String // "oauth" | "credentials" | "siwe"
+  provider          String // Auth.js provider id — "google" | "github" | "resend" | "siwe"
   providerAccountId String // OAuth "sub" OR wallet address for SIWE
 
   // OAuth tokens (encrypted at rest in production)

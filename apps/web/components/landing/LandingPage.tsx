@@ -165,27 +165,24 @@ export function LandingPage() {
     },
   ]
 
-  const TESTIMONIALS = [
+  const PERSONAS = [
     {
-      name: 'Priya S.',
-      role: 'Senior Software Engineer, 4 yrs exp',
-      quote: 'I was sending 60+ applications and getting 2 interviews. ATS systems kept killing my resume despite real skills. ATTESTA\'s AI skill eval showed what I could actually do. Three offers in three weeks.',
-      score: '94 FitScore',
-      tier: 'T2 Employer Verified',
+      name: 'Priya',
+      role: 'Senior software engineer, 4 yrs exp',
+      problem: 'Sends 60+ applications, gets 2 interviews. ATS keyword-matching filters her out despite having the actual skills for the role.',
+      fix: 'AI-scored skill artifacts replace keyword matching — employers see what she can build, not how well her resume parses.',
     },
     {
-      name: 'Marcus T.',
-      role: 'Product Director, confidential search',
-      quote: 'Couldn\'t use LinkedIn — my employer would see. ATTESTA let me run a fully private job search. ZK disclosures so employers could verify my comp range without me revealing the exact number. Exactly what I needed.',
-      score: '91 FitScore',
-      tier: 'T1 Govt Verified',
+      name: 'Marcus',
+      role: 'Product director, currently employed',
+      problem: 'Needs a confidential search. Can\'t touch LinkedIn without his employer noticing, and can\'t prove his comp band without revealing the exact number.',
+      fix: 'Private-mode profile plus ZK salary disclosures — proves "comp > $X" to a recruiter without exposing the figure.',
     },
     {
-      name: 'Anika R.',
-      role: 'VP People, Series C company',
-      quote: 'We were reviewing 300+ resumes per role. 30% of hires left in 6 months. WorkProof Live trials changed everything — candidates do real work, we see real signal. Time-to-hire dropped from 68 days to 11.',
-      score: '−82% time to hire',
-      tier: 'Enterprise Customer',
+      name: 'Anika',
+      role: 'Senior technical recruiter',
+      problem: 'Reviews 300+ resumes per role and still can\'t tell who has real skills before the interview. 30% of hires leave within 6 months.',
+      fix: 'Co-signed employment history and evaluated work artifacts arrive pre-verified, so screening starts from signal, not guesswork.',
     },
   ]
 
@@ -272,9 +269,9 @@ export function LandingPage() {
             transition={{ duration: 0.7, delay: 0.25 }}
             className="text-xl sm:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed mb-12"
           >
-            Resumes lie. Interviews mislead. ATTESTA replaces them with
-            cryptographic attestations anchored on blockchain — verifiable by anyone,
-            forgeable by no one.
+            A resume is a claim. A co-signed, on-chain attestation is proof.
+            ATTESTA turns your work history, skills, and references into credentials
+            that employers can verify in seconds — not weeks.
           </motion.p>
 
           <motion.div
@@ -298,23 +295,17 @@ export function LandingPage() {
             </Link>
           </motion.div>
 
-          {/* Live stats row */}
+          {/* What's actually built, not fabricated traction numbers */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="grid grid-cols-3 gap-8 max-w-lg mx-auto"
+            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 max-w-2xl mx-auto"
           >
-            {[
-              { n: 100000, suf: '+', label: 'Profiles' },
-              { n: 500, suf: '+', label: 'Employers' },
-              { n: 99, suf: '.9%', label: 'Uptime' },
-            ].map(({ n, suf, label }) => (
-              <div key={label} className="text-center">
-                <p className="text-2xl font-black text-white">
-                  <Counter end={n} suffix={suf} />
-                </p>
-                <p className="text-xs text-slate-500 mt-1 font-medium">{label}</p>
+            {['W3C DID Core', 'Polygon PoS anchored', 'Zero-knowledge disclosures', 'GDPR-ready'].map(label => (
+              <div key={label} className="flex items-center gap-2 text-sm text-slate-400 font-medium">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full shrink-0" />
+                {label}
               </div>
             ))}
           </motion.div>
@@ -534,7 +525,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ─────────────────────────────────────────────────────── */}
+      {/* ── WHO IT'S FOR ─────────────────────────────────────────────────────── */}
       <section className="py-28 bg-slate-950">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -544,39 +535,27 @@ export function LandingPage() {
               viewport={{ once: true }}
               className="text-4xl sm:text-5xl font-black text-white mb-4"
             >
-              Real results
+              Built for people stuck in the same broken system
             </motion.h2>
-            <p className="text-slate-400 text-lg">From people who stopped submitting resumes into the void.</p>
+            <p className="text-slate-400 text-lg">Three sides of hiring, one shared problem: no way to verify what's true.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
+            {PERSONAS.map((p, i) => (
               <motion.div
-                key={t.name}
+                key={p.name}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.12 }}
                 className="p-7 rounded-3xl bg-slate-800/40 border border-slate-700/60 hover:border-slate-600 transition-colors"
               >
-                <div className="flex items-center gap-1 mb-5">
-                  {[...Array(5)].map((_, j) => (
-                    <span key={j} className="text-amber-400 text-sm">★</span>
-                  ))}
-                </div>
-                <blockquote className="text-slate-300 text-sm leading-relaxed mb-6">
-                  &ldquo;{t.quote}&rdquo;
-                </blockquote>
+                <p className="font-bold text-white text-sm">{p.name}</p>
+                <p className="text-slate-500 text-xs mt-0.5 mb-5">{p.role}</p>
+                <p className="text-xs font-bold text-red-400/80 uppercase tracking-wider mb-1.5">The problem</p>
+                <p className="text-slate-300 text-sm leading-relaxed mb-5">{p.problem}</p>
                 <div className="border-t border-slate-700 pt-5">
-                  <p className="font-bold text-white text-sm">{t.name}</p>
-                  <p className="text-slate-500 text-xs mt-0.5">{t.role}</p>
-                  <div className="flex gap-2 mt-3">
-                    <span className="text-xs px-2.5 py-1 bg-indigo-500/15 text-indigo-400 border border-indigo-500/20 rounded-full font-semibold">
-                      {t.score}
-                    </span>
-                    <span className="text-xs px-2.5 py-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-full font-semibold">
-                      {t.tier}
-                    </span>
-                  </div>
+                  <p className="text-xs font-bold text-emerald-400/80 uppercase tracking-wider mb-1.5">With ATTESTA</p>
+                  <p className="text-slate-300 text-sm leading-relaxed">{p.fix}</p>
                 </div>
               </motion.div>
             ))}
