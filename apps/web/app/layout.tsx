@@ -10,11 +10,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'ATTESTA — Trust Infrastructure for Professional Work',
+    default: 'ATTESTA — Resumes are fiction. This is nonfiction.',
     template: '%s | ATTESTA',
   },
   description:
-    'Cryptographically verified professional credentials. Replace resumes, ATS, and interviews with trustworthy proof of work.',
+    'Anyone can write a resume. ATTESTA turns your work history, skills, and references into co-signed, on-chain proof — verified in seconds, impossible to fake.',
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
 }
 

@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { motion, useInView, AnimatePresence } from 'framer-motion'
+
+// Revolut-derived design tokens (DESIGN.md) — true black/white band system, no gradients, no shadows.
+const dot = 'w-1.5 h-1.5 rounded-full shrink-0'
 
 // ─── Animated counter ──────────────────────────────────────────────────────────
 function Counter({ end, suffix = '', prefix = '' }: { end: number; suffix?: string; prefix?: string }) {
@@ -13,7 +16,7 @@ function Counter({ end, suffix = '', prefix = '' }: { end: number; suffix?: stri
   useEffect(() => {
     if (!inView) return
     let start = 0
-    const duration = 1800
+    const duration = 1400
     const step = end / (duration / 16)
     const timer = setInterval(() => {
       start += step
@@ -30,27 +33,19 @@ function Counter({ end, suffix = '', prefix = '' }: { end: number; suffix?: stri
 const FAQS = [
   {
     q: 'How is ATTESTA different from LinkedIn?',
-    a: 'LinkedIn is self-reported — anyone can claim anything. ATTESTA requires every credential to be cryptographically co-signed by the issuing party (employer, university, AI evaluator) and anchored on Polygon blockchain. No co-sign = no credential. Fraud is mathematically impossible.',
+    a: 'LinkedIn is self-reported — anyone can claim anything. ATTESTA requires every credential to be cryptographically co-signed by the issuing party (employer, university, AI evaluator) and anchored on Polygon blockchain. No co-sign, no credential.',
   },
   {
     q: 'What is a ZK disclosure?',
-    a: 'Zero-Knowledge proofs let you prove facts without revealing the underlying data. Example: prove your salary exceeds $150K to an employer without ever sharing the exact number. The proof is generated in your browser — our servers never see your raw data.',
+    a: 'Zero-knowledge proofs let you prove facts without revealing the underlying data. Example: prove your salary exceeds $150K without ever sharing the exact number. The proof is generated in your browser — our servers never see the raw data.',
   },
   {
     q: 'Is my personal data stored on the blockchain?',
-    a: 'Never. Only cryptographic hashes (fingerprints) go on-chain. All PII stays encrypted in our database with AES-256. You have full GDPR Article 17 right to erasure — we can scrub your data from our systems; the immutable hash on-chain contains zero personal information.',
-  },
-  {
-    q: 'How do WorkProof Live trials work?',
-    a: 'Employers post 2-8 hour paid work trials ($150-$500). You complete real tasks in a browser-sandboxed VS Code or Figma environment. AI evaluates your output — code via AST analysis, design via CLIP vision model, writing via Llama 3.1. You get paid $50-$200 within 48 hours regardless of outcome. Your score becomes a permanent artifact in your profile.',
-  },
-  {
-    q: 'How does TrustChain referral work?',
-    a: 'ATTESTA builds a trust graph from verified work histories. If you know someone who knows someone at your target company, we surface that path. Smart contracts hold bounty escrow ($1K-$15K) and release automatically in tranches: 33% at hire, 33% at 90 days, 33% at 180 days. No middlemen, no manual payouts.',
+    a: 'Never. Only cryptographic hashes go on-chain. All PII stays encrypted with AES-256. You have full GDPR Article 17 right to erasure — the immutable hash on-chain contains zero personal information.',
   },
   {
     q: 'What is OpenRep?',
-    a: 'OpenRep is the MIT-licensed protocol layer underneath ATTESTA — like HTTP for professional trust. Universities, governments, and any platform can issue verifiable credentials using the W3C DID + VC standard. ATTESTA Inc is the reference implementation; anyone can build on the protocol.',
+    a: 'OpenRep is the MIT-licensed protocol layer underneath ATTESTA — like HTTP for professional trust. Universities, governments, and any platform will be able to issue verifiable credentials on the same W3C DID + VC standard.',
   },
 ]
 
@@ -58,21 +53,21 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
   const [open, setOpen] = useState(false)
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ delay: index * 0.07 }}
-      className="border border-slate-800 rounded-2xl overflow-hidden"
+      transition={{ delay: index * 0.06 }}
+      className="border-b border-[#e2e2e7] last:border-b-0"
     >
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-slate-800/50 transition-colors"
+        className="w-full flex items-center justify-between py-6 text-left"
       >
-        <span className="text-white font-semibold text-sm sm:text-base">{q}</span>
+        <span className="text-[#191c1f] font-medium text-base">{q}</span>
         <motion.span
           animate={{ rotate: open ? 45 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-indigo-400 text-xl font-light ml-4 shrink-0"
+          className="text-[#191c1f] text-2xl font-light ml-4 shrink-0"
         >
           +
         </motion.span>
@@ -86,7 +81,7 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <p className="px-6 pb-5 text-slate-400 text-sm leading-relaxed">{a}</p>
+            <p className="pb-6 text-[#505a63] text-[15px] leading-relaxed max-w-2xl">{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -97,71 +92,58 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 export function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
-  const heroRef = useRef<HTMLDivElement>(null)
-  const { scrollY } = useScroll()
-  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0])
-  const heroY = useTransform(scrollY, [0, 400], [0, -80])
 
   useEffect(() => {
-    const unsub = scrollY.on('change', v => setScrolled(v > 20))
-    return unsub
-  }, [scrollY])
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const MODULES = [
     {
       num: '01',
       name: 'ProofWork',
       tagline: 'Replace the resume',
-      desc: 'Government ID verified via ZK proofs. Employer co-signed work history anchored on Polygon. AI-scored skills with artifact evidence. A living credential that grows with your career.',
-      features: ['W3C DID on Polygon PoS', 'Govt ID via Onfido ZK', 'FaceTec 3D liveness', 'Employer co-sign flow', 'ZK salary disclosures', 'Chrome extension overlay'],
-      color: 'from-indigo-500/20 to-blue-500/10',
-      accent: 'text-indigo-400',
-      border: 'border-indigo-500/30',
+      desc: 'Government ID verified via ZK proofs. Employer co-signed work history anchored on Polygon. AI-scored skills with artifact evidence.',
+      features: ['W3C DID on Polygon PoS', 'Govt ID via ZK proof', 'Employer co-sign flow', 'ZK salary disclosures'],
       status: 'Live',
+      dotColor: '#494fdf',
     },
     {
       num: '02',
       name: 'WorkProof Live',
       tagline: 'Replace the interview',
-      desc: '2-8 hour paid trials in browser-sandboxed environments. Real work, not trick questions. AI evaluates every submission. Candidates get paid regardless of outcome.',
-      features: ['VS Code in browser', 'Figma sandbox (design)', 'Jupyter (data science)', 'WebRTC anti-cheat', '$50-$200 candidate payout', 'Permanent score artifact'],
-      color: 'from-violet-500/20 to-purple-500/10',
-      accent: 'text-violet-400',
-      border: 'border-violet-500/30',
-      status: 'Live',
+      desc: '2–8 hour paid trials in browser-sandboxed environments. Real work, not trick questions. AI evaluates every submission.',
+      features: ['VS Code in browser', 'Figma sandbox (design)', 'WebRTC anti-cheat', 'Permanent score artifact'],
+      status: 'In development',
+      dotColor: '#00a87e',
     },
     {
       num: '03',
       name: 'TrustChain',
       tagline: 'Replace the network gap',
-      desc: 'AI-built trust graph from verified work histories. Discover who you know who knows who. Smart contract bounties auto-release at hire, 90-day, 180-day milestones.',
-      features: ['Neo4j trust graph', 'Path discovery (3 hops)', '$1K-$15K bounties', 'Smart contract escrow', 'Anti-collusion AI', 'Talent Scout program'],
-      color: 'from-purple-500/20 to-pink-500/10',
-      accent: 'text-purple-400',
-      border: 'border-purple-500/30',
-      status: 'Live',
+      desc: 'AI-built trust graph from verified work histories. Smart-contract bounties auto-release at hire, 90-day, and 180-day milestones.',
+      features: ['Trust-graph path discovery', 'Smart contract escrow', 'Anti-collusion detection', 'Talent Scout program'],
+      status: 'In development',
+      dotColor: '#e61e49',
     },
     {
       num: '04',
       name: 'RoleFit AI',
       tagline: 'Replace the ATS',
-      desc: 'Extracts REAL requirements from GitHub repos and Figma, not job description keywords. Blind matching until mutual interest. FitScore 0-100 with full SHAP explainability.',
-      features: ['5-dimension scoring', 'Blind matching mode', 'EEOC-compliant audit log', 'ATS integrations', 'SHAP explainability', 'RL outcome feedback'],
-      color: 'from-blue-500/20 to-cyan-500/10',
-      accent: 'text-blue-400',
-      border: 'border-blue-500/30',
-      status: 'Live',
+      desc: 'Extracts real requirements from GitHub repos and Figma, not job-description keywords. Blind matching until mutual interest.',
+      features: ['5-dimension scoring', 'Blind matching mode', 'SHAP explainability', 'EEOC-compliant audit log'],
+      status: 'In development',
+      dotColor: '#007bc2',
     },
     {
       num: '05',
       name: 'OpenRep',
       tagline: 'The protocol layer',
-      desc: 'MIT-licensed W3C DID + VC protocol. Like HTTP for professional trust. Universities, governments, any platform can issue verifiable credentials. Community-governed DAO.',
-      features: ['W3C DID Core', 'VC Data Model 1.1', 'ZK Disclosure Protocol', 'Community DAO', 'University issuers', 'Government integrations'],
-      color: 'from-emerald-500/20 to-teal-500/10',
-      accent: 'text-emerald-400',
-      border: 'border-emerald-500/30',
-      status: 'Live',
+      desc: 'MIT-licensed W3C DID + VC protocol. Like HTTP for professional trust. Any platform will be able to issue verifiable credentials.',
+      features: ['W3C DID Core', 'VC Data Model 1.1', 'ZK Disclosure Protocol', 'Community-governed DAO'],
+      status: 'Planned',
+      dotColor: '#428619',
     },
   ]
 
@@ -187,253 +169,197 @@ export function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden font-sans">
 
       {/* ── NAV ──────────────────────────────────────────────────────────────── */}
-      <motion.nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled ? 'bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/60 shadow-xl shadow-slate-950/50' : ''
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center transition-colors duration-300 ${
+          scrolled ? 'bg-black border-b border-white/[0.12]' : 'bg-transparent'
         }`}
-        initial={{ y: -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <span className="font-black text-xl tracking-tight bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+        <div className="max-w-[1200px] mx-auto px-6 w-full flex items-center justify-between">
+          <div className="flex items-center gap-10">
+            <span className="font-semibold text-lg tracking-[-0.02em]" style={{ color: '#494fdf' }}>
               ATTESTA
             </span>
-            <div className="hidden md:flex items-center gap-6">
-              {['Product', 'Pricing', 'Protocol', 'Docs'].map(item => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm text-slate-400 hover:text-white transition-colors font-medium">
+            <div className="hidden md:flex items-center gap-7">
+              {['Product', 'Pricing', 'Protocol'].map(item => (
+                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm text-white/72 hover:text-white transition-colors">
                   {item}
                 </a>
               ))}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm text-slate-400 hover:text-white font-medium transition-colors px-3 py-2">
+            <Link href="/login" className="text-sm text-white/72 hover:text-white transition-colors px-2">
               Sign in
             </Link>
             <Link
               href="/signup"
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-indigo-900/50 hover:shadow-indigo-800/50"
+              className="bg-white text-black text-sm font-semibold rounded-full px-6 h-11 flex items-center transition-opacity hover:opacity-90"
             >
               Get started free
             </Link>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
-      {/* ── HERO ─────────────────────────────────────────────────────────────── */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-        {/* Gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950 pointer-events-none" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-violet-600/8 rounded-full blur-[100px] pointer-events-none" />
-
-        {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.04)_1px,transparent_1px)] bg-[size:72px_72px] pointer-events-none" />
-
-        <motion.div
-          style={{ opacity: heroOpacity, y: heroY }}
-          className="relative z-10 max-w-5xl mx-auto px-6 text-center"
-        >
+      {/* ── HERO — hero-band-dark ───────────────────────────────────────────── */}
+      <section className="bg-black pt-40 pb-24 px-6">
+        <div className="max-w-[1200px] mx-auto text-center">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-5 py-2 text-sm font-semibold text-indigo-300 mb-8"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-white/72 mb-10"
+            style={{ backgroundColor: '#16181a' }}
           >
-            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
-            Trust infrastructure for the future of work
-            <span className="text-indigo-500">→</span>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#494fdf' }} />
+            The resume is 70 years old. It shows.
           </motion.div>
 
           <motion.h1
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-[0.9] mb-8"
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-[clamp(2.75rem,7.2vw,7.5rem)] leading-[0.98] tracking-[-0.03em] font-semibold mb-8"
           >
-            <span className="text-white">Proof,</span>
+            Resumes are fiction.
             <br />
-            <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
-              not promises.
-            </span>
+            <span style={{ color: '#494fdf' }}>This is nonfiction.</span>
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.25 }}
-            className="text-xl sm:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed mb-12"
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-lg sm:text-xl text-white/72 max-w-xl mx-auto leading-relaxed mb-10"
           >
-            A resume is a claim. A co-signed, on-chain attestation is proof.
-            ATTESTA turns your work history, skills, and references into credentials
-            that employers can verify in seconds — not weeks.
+            Anyone can write a resume. Only ATTESTA turns your work into
+            co-signed, on-chain proof — verified in seconds, impossible to fake.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14"
           >
             <Link
               href="/signup"
-              className="group px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all duration-200 text-lg shadow-2xl shadow-indigo-900/60 hover:shadow-indigo-800/60 hover:-translate-y-0.5"
+              className="bg-white text-black font-semibold rounded-full px-7 h-12 flex items-center text-[15px] transition-opacity hover:opacity-90"
             >
               Build your ProofWork profile
-              <span className="ml-2 group-hover:translate-x-1 inline-block transition-transform">→</span>
             </Link>
             <Link
               href="/employer/register"
-              className="px-8 py-4 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-bold rounded-xl transition-all duration-200 text-lg hover:bg-slate-800/50"
+              className="border border-white/[0.28] text-white font-semibold rounded-full px-7 h-12 flex items-center text-[15px] hover:bg-white/[0.06] transition-colors"
             >
               Hire with ATTESTA
             </Link>
           </motion.div>
 
-          {/* What's actually built, not fabricated traction numbers */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 max-w-2xl mx-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2"
           >
             {['W3C DID Core', 'Polygon PoS anchored', 'Zero-knowledge disclosures', 'GDPR-ready'].map(label => (
-              <div key={label} className="flex items-center gap-2 text-sm text-slate-400 font-medium">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full shrink-0" />
+              <div key={label} className="flex items-center gap-2 text-sm text-white/72">
+                <span className={dot} style={{ backgroundColor: '#00a87e' }} />
                 {label}
               </div>
             ))}
           </motion.div>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-        >
-          <span className="text-xs text-slate-600 font-medium tracking-widest uppercase">Scroll</span>
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-            className="w-px h-8 bg-gradient-to-b from-slate-600 to-transparent"
-          />
-        </motion.div>
+        </div>
       </section>
 
-      {/* ── PROBLEM STATS ────────────────────────────────────────────────────── */}
-      <section className="py-24 border-y border-slate-800/50 bg-gradient-to-b from-slate-950 to-slate-900">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center text-xs font-bold text-slate-600 uppercase tracking-[0.3em] mb-16"
-          >
-            The hiring system is broken — and everyone is paying for it
-          </motion.p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 sm:gap-10">
+      {/* ── PROBLEM STATS — light catalogue band ────────────────────────────── */}
+      <section className="bg-white py-[88px] px-6">
+        <div className="max-w-[1200px] mx-auto">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] mb-14" style={{ color: '#8d969e' }}>
+            The hiring system is broken
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
-              { stat: 600, prefix: '$', suffix: 'B', label: 'Annual resume fraud cost', severity: 'high' },
-              { stat: 68, suffix: ' days', label: 'Average time to hire', severity: 'high' },
-              { stat: 88, suffix: '%', label: 'Qualified candidates ATS-rejected', severity: 'high' },
-              { stat: 27, suffix: '%', label: 'Job listings are ghost jobs', severity: 'medium' },
-              { stat: 50, suffix: '%', label: 'Companies hit by interview deepfakes', severity: 'medium' },
-              { stat: 7, suffix: '%', label: 'Applicants with referral advantage', severity: 'low' },
-            ].map(({ stat, prefix, suffix, label, severity }, i) => (
+              { stat: 600, prefix: '$', suffix: 'B', label: 'Annual resume fraud cost', color: '#e23b4a' },
+              { stat: 68, suffix: ' days', label: 'Average time to hire', color: '#e23b4a' },
+              { stat: 88, suffix: '%', label: 'Qualified candidates ATS-rejected', color: '#e23b4a' },
+              { stat: 27, suffix: '%', label: 'Job listings are ghost jobs', color: '#ec7e00' },
+              { stat: 50, suffix: '%', label: 'Companies hit by interview deepfakes', color: '#ec7e00' },
+              { stat: 7, suffix: '%', label: 'Applicants with referral advantage', color: '#b09000' },
+            ].map(({ stat, prefix, suffix, label, color }, i) => (
               <motion.div
                 key={label}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-                className="text-center p-6 rounded-2xl bg-slate-800/30 border border-slate-800 hover:border-slate-700 transition-colors"
+                transition={{ delay: i * 0.06 }}
+                className="text-center p-6 rounded-[20px] border border-[#e2e2e7]"
               >
-                <p className={`text-4xl sm:text-5xl font-black mb-2 ${
-                  severity === 'high' ? 'text-red-400' : severity === 'medium' ? 'text-orange-400' : 'text-yellow-400'
-                }`}>
+                <p className="text-4xl sm:text-5xl font-semibold tracking-[-0.02em] mb-2" style={{ color }}>
                   <Counter end={stat} prefix={prefix ?? ''} suffix={suffix} />
                 </p>
-                <p className="text-sm text-slate-400 leading-snug">{label}</p>
+                <p className="text-sm leading-snug" style={{ color: '#505a63' }}>{label}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── 5-MODULE PRODUCT ─────────────────────────────────────────────────── */}
-      <section id="product" className="py-28 bg-slate-950">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-4 py-1.5 text-xs font-semibold text-violet-400 mb-6"
-            >
-              Five layers of verifiable trust
-            </motion.div>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-4xl sm:text-5xl font-black text-white mb-6"
-            >
-              Everything hiring needs,<br />
-              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-                built on proof not trust.
-              </span>
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="text-slate-400 text-lg max-w-2xl mx-auto"
-            >
-              Each layer replaces a broken piece of hiring. Together they form a complete trust stack
-              that makes fraud impossible and great hires inevitable.
-            </motion.p>
+      {/* ── 5-MODULE PRODUCT — dark storytelling band ───────────────────────── */}
+      <section id="product" className="bg-black py-[88px] px-6">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/72 mb-5">Five layers of verifiable trust</p>
+            <h2 className="text-[clamp(1.75rem,4vw,3rem)] font-semibold tracking-[-0.02em] mb-5">
+              Everything hiring needs, built on proof.
+            </h2>
+            <p className="text-white/72 text-lg max-w-xl mx-auto">
+              Each layer replaces a broken piece of hiring. ProofWork is live today; the rest of the stack ships next.
+            </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {MODULES.map((mod, i) => (
               <motion.div
                 key={mod.name}
-                initial={{ opacity: 0, x: i % 2 === 0 ? -30 : 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className={`group relative p-8 rounded-3xl border ${mod.border} bg-gradient-to-br ${mod.color} hover:bg-slate-800/40 transition-all duration-300`}
+                transition={{ delay: i * 0.08 }}
+                className="rounded-[20px] p-8"
+                style={{ backgroundColor: '#16181a' }}
               >
                 <div className="flex flex-col lg:flex-row gap-8">
                   <div className="flex-1">
-                    <div className="flex items-start gap-4 mb-4">
-                      <span className="text-5xl font-black text-slate-700 leading-none">{mod.num}</span>
+                    <div className="flex items-start gap-4 mb-3">
+                      <span className="text-4xl font-semibold text-white/[0.18] leading-none">{mod.num}</span>
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <h3 className="text-2xl font-black text-white">{mod.name}</h3>
-                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20`}>
-                            ✓ {mod.status}
+                          <h3 className="text-xl font-semibold">{mod.name}</h3>
+                          <span
+                            className="text-xs font-medium px-2.5 py-1 rounded-full"
+                            style={
+                              mod.status === 'Live'
+                                ? { backgroundColor: '#494fdf', color: '#ffffff' }
+                                : { backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.72)' }
+                            }
+                          >
+                            {mod.status}
                           </span>
                         </div>
-                        <p className={`text-sm font-semibold ${mod.accent} uppercase tracking-wider`}>{mod.tagline}</p>
+                        <p className="text-sm font-medium text-white/72">{mod.tagline}</p>
                       </div>
                     </div>
-                    <p className="text-slate-300 leading-relaxed text-base max-w-lg">{mod.desc}</p>
+                    <p className="text-white/72 leading-relaxed text-[15px] max-w-lg">{mod.desc}</p>
                   </div>
-                  <div className="lg:w-72 shrink-0">
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="lg:w-64 shrink-0">
+                    <div className="grid grid-cols-1 gap-2">
                       {mod.features.map(f => (
-                        <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
-                          <span className={`w-1.5 h-1.5 rounded-full ${mod.accent.replace('text-', 'bg-')} shrink-0`} />
+                        <div key={f} className="flex items-center gap-2 text-sm text-white/72">
+                          <span className={dot} style={{ backgroundColor: mod.dotColor }} />
                           {f}
                         </div>
                       ))}
@@ -446,76 +372,75 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────────────────── */}
-      <section className="py-28 bg-slate-900/50 border-y border-slate-800">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-4xl sm:text-5xl font-black text-white mb-4"
-            >
+      {/* ── HOW IT WORKS — light catalogue band ─────────────────────────────── */}
+      <section className="bg-white py-[88px] px-6">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-[clamp(1.75rem,4vw,3rem)] font-semibold tracking-[-0.02em] mb-4" style={{ color: '#191c1f' }}>
               How it works
-            </motion.h2>
-            <p className="text-slate-400 text-lg">From signup to verified hire in days, not months.</p>
+            </h2>
+            <p className="text-lg" style={{ color: '#505a63' }}>From signup to verified hire in days, not months.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-12">
-            {/* Candidate flow */}
             <div>
-              <h3 className="text-lg font-bold text-indigo-400 uppercase tracking-wider mb-8">For Candidates</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider mb-8" style={{ color: '#494fdf' }}>For candidates</h3>
               <div className="space-y-6">
                 {[
-                  { step: '1', title: 'Verify your identity', desc: 'Government ID + FaceTec 3D liveness. Takes 3 minutes. No PII stored — ZK proofs only.' },
+                  { step: '1', title: 'Verify your identity', desc: 'Government ID + liveness check. Takes 3 minutes. No PII stored — ZK proofs only.' },
                   { step: '2', title: 'Add verified work history', desc: 'Request employer co-sign. They countersign digitally. Both signatures anchor on Polygon.' },
-                  { step: '3', title: 'Score your skills', desc: 'Submit code, design, or writing artifacts. AI evaluates in 30 minutes. Score becomes your credential.' },
-                  { step: '4', title: 'Control your disclosures', desc: 'Choose what\'s public, what requires ZK proof, what stays private. You own your reputation.' },
+                  { step: '3', title: 'Score your skills', desc: 'Submit code, design, or writing artifacts. AI evaluates and issues a scored credential.' },
+                  { step: '4', title: 'Control your disclosures', desc: 'Choose what\'s public, what requires ZK proof, what stays private.' },
                 ].map(({ step, title, desc }, i) => (
                   <motion.div
                     key={step}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -16 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
+                    transition={{ delay: i * 0.08 }}
                     className="flex gap-4"
                   >
-                    <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-xs font-black text-indigo-400 shrink-0 mt-0.5">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5"
+                      style={{ backgroundColor: '#f4f4f4', color: '#191c1f' }}
+                    >
                       {step}
                     </div>
                     <div>
-                      <p className="font-semibold text-white mb-1">{title}</p>
-                      <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
+                      <p className="font-semibold mb-1" style={{ color: '#191c1f' }}>{title}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: '#505a63' }}>{desc}</p>
                     </div>
                   </motion.div>
                 ))}
               </div>
             </div>
 
-            {/* Employer flow */}
             <div>
-              <h3 className="text-lg font-bold text-violet-400 uppercase tracking-wider mb-8">For Employers</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider mb-8" style={{ color: '#494fdf' }}>For employers</h3>
               <div className="space-y-6">
                 {[
                   { step: '1', title: 'Define the role', desc: 'Post a role and optionally share your GitHub/Figma. RoleFit AI extracts real requirements — not keywords.' },
-                  { step: '2', title: 'Get matched candidates', desc: 'Top-50 ranked by FitScore (0-100). Fully anonymous — no names, no photos, no university until you decide.' },
-                  { step: '3', title: 'Run a WorkProof trial', desc: 'Book 2-8 hour paid trial. Candidate completes real work. AI returns scored results in 2 hours.' },
-                  { step: '4', title: 'Hire with confidence', desc: 'Every credential cryptographically verified. Smart contracts auto-release referral bounties. Full audit trail.' },
+                  { step: '2', title: 'Get matched candidates', desc: 'Ranked by FitScore. Fully anonymous — no names, no photos, no university until you decide.' },
+                  { step: '3', title: 'Run a WorkProof trial', desc: 'Book a paid trial. Candidate completes real work. AI returns scored results.' },
+                  { step: '4', title: 'Hire with confidence', desc: 'Every credential cryptographically verified. Full audit trail.' },
                 ].map(({ step, title, desc }, i) => (
                   <motion.div
                     key={step}
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, x: 16 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
+                    transition={{ delay: i * 0.08 }}
                     className="flex gap-4"
                   >
-                    <div className="w-8 h-8 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-black text-violet-400 shrink-0 mt-0.5">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5"
+                      style={{ backgroundColor: '#f4f4f4', color: '#191c1f' }}
+                    >
                       {step}
                     </div>
                     <div>
-                      <p className="font-semibold text-white mb-1">{title}</p>
-                      <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
+                      <p className="font-semibold mb-1" style={{ color: '#191c1f' }}>{title}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: '#505a63' }}>{desc}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -525,37 +450,33 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── WHO IT'S FOR ─────────────────────────────────────────────────────── */}
-      <section className="py-28 bg-slate-950">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ── WHO IT'S FOR — dark storytelling band ───────────────────────────── */}
+      <section className="bg-black py-[88px] px-6">
+        <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-4xl sm:text-5xl font-black text-white mb-4"
-            >
+            <h2 className="text-[clamp(1.75rem,4vw,3rem)] font-semibold tracking-[-0.02em] mb-4">
               Built for people stuck in the same broken system
-            </motion.h2>
-            <p className="text-slate-400 text-lg">Three sides of hiring, one shared problem: no way to verify what's true.</p>
+            </h2>
+            <p className="text-white/72 text-lg">Three sides of hiring, one shared problem: no way to verify what&apos;s true.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-4">
             {PERSONAS.map((p, i) => (
               <motion.div
                 key={p.name}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.12 }}
-                className="p-7 rounded-3xl bg-slate-800/40 border border-slate-700/60 hover:border-slate-600 transition-colors"
+                transition={{ delay: i * 0.1 }}
+                className="rounded-[20px] p-8"
+                style={{ backgroundColor: '#16181a' }}
               >
-                <p className="font-bold text-white text-sm">{p.name}</p>
-                <p className="text-slate-500 text-xs mt-0.5 mb-5">{p.role}</p>
-                <p className="text-xs font-bold text-red-400/80 uppercase tracking-wider mb-1.5">The problem</p>
-                <p className="text-slate-300 text-sm leading-relaxed mb-5">{p.problem}</p>
-                <div className="border-t border-slate-700 pt-5">
-                  <p className="text-xs font-bold text-emerald-400/80 uppercase tracking-wider mb-1.5">With ATTESTA</p>
-                  <p className="text-slate-300 text-sm leading-relaxed">{p.fix}</p>
+                <p className="font-semibold text-base">{p.name}</p>
+                <p className="text-sm text-white/72 mt-0.5 mb-6">{p.role}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#e61e49' }}>The problem</p>
+                <p className="text-white/72 text-sm leading-relaxed mb-6">{p.problem}</p>
+                <div className="pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#00a87e' }}>With ATTESTA</p>
+                  <p className="text-white/72 text-sm leading-relaxed">{p.fix}</p>
                 </div>
               </motion.div>
             ))}
@@ -563,234 +484,155 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── PRICING ──────────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-28 bg-slate-900/70 border-y border-slate-800">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ── PRICING — dark storytelling band, plan cards ────────────────────── */}
+      <section id="pricing" className="bg-black py-[88px] px-6">
+        <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 text-xs font-semibold text-indigo-400 mb-6"
-            >
-              Simple, transparent pricing
-            </motion.div>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-4xl sm:text-5xl font-black text-white mb-4"
-            >
+            <h2 className="text-[clamp(1.75rem,4vw,3rem)] font-semibold tracking-[-0.02em] mb-4">
               Start free. Scale as you hire.
-            </motion.h2>
-            <p className="text-slate-400 text-lg">Candidates always free. Employers pay per hire or subscribe.</p>
+            </h2>
+            <p className="text-white/72 text-lg">Candidates always free. Employers pay per hire or subscribe.</p>
           </div>
 
-          {/* Candidate pricing */}
-          <div className="mb-14">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">For Candidates</h3>
-            <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <div className="mb-16">
+            <h3 className="text-sm font-semibold uppercase tracking-widest mb-6 text-center text-white/72">For candidates</h3>
+            <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
               {[
                 {
-                  name: 'Free Forever',
-                  price: '$0',
-                  period: '',
-                  features: ['ProofWork public profile', 'Government ID verification (T1)', 'Up to 3 employer co-signs', 'Up to 5 skill attestations', 'Basic ZK disclosures', 'Chrome extension badge', 'OpenRep protocol access'],
-                  cta: 'Get started free',
-                  href: '/signup',
-                  highlight: false,
+                  name: 'Free Forever', price: '$0', period: '',
+                  features: ['ProofWork public profile', 'Government ID verification', 'Up to 3 employer co-signs', 'Basic ZK disclosures'],
+                  cta: 'Get started free', href: '/signup', highlight: false,
                 },
                 {
-                  name: 'Candidate Pro',
-                  price: '$15',
-                  period: '/month',
-                  features: ['Everything in Free', 'Unlimited employer co-signs', 'Unlimited skill attestations', 'Advanced ZK disclosures ($29-$199 value)', 'Priority AI skill evaluation', 'Compensation intelligence access', 'TrustChain referral notifications', 'Hire Guarantee Insurance eligibility'],
-                  cta: 'Start 14-day trial',
-                  href: '/signup?plan=pro',
-                  highlight: true,
+                  name: 'Candidate Pro', price: '$15', period: '/month',
+                  features: ['Everything in Free', 'Unlimited co-signs', 'Advanced ZK disclosures', 'Priority AI skill evaluation'],
+                  cta: 'Start 14-day trial', href: '/signup?plan=pro', highlight: true,
                 },
               ].map(plan => (
-                <motion.div
+                <div
                   key={plan.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className={`p-7 rounded-3xl border relative ${
-                    plan.highlight
-                      ? 'bg-indigo-600/10 border-indigo-500/50 shadow-2xl shadow-indigo-900/30'
-                      : 'bg-slate-800/40 border-slate-700'
-                  }`}
+                  className="rounded-[20px] p-8"
+                  style={plan.highlight ? { backgroundColor: '#494fdf' } : { backgroundColor: '#16181a' }}
                 >
-                  {plan.highlight && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-indigo-600 rounded-full text-xs font-bold text-white">
-                      Most popular
-                    </div>
-                  )}
-                  <h4 className="font-bold text-white mb-1">{plan.name}</h4>
+                  <h4 className="font-semibold mb-1">{plan.name}</h4>
                   <div className="flex items-baseline gap-1 mb-6">
-                    <span className="text-4xl font-black text-white">{plan.price}</span>
-                    <span className="text-slate-400 text-sm">{plan.period}</span>
+                    <span className="text-3xl font-semibold tracking-[-0.02em]">{plan.price}</span>
+                    <span className={plan.highlight ? 'text-white/80 text-sm' : 'text-white/72 text-sm'}>{plan.period}</span>
                   </div>
                   <ul className="space-y-2.5 mb-8">
                     {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
-                        <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
+                      <li key={f} className="flex items-start gap-2.5 text-sm">
+                        <span className="mt-0.5 shrink-0">✓</span>
                         {f}
                       </li>
                     ))}
                   </ul>
                   <Link
                     href={plan.href}
-                    className={`block text-center py-3 rounded-xl font-bold text-sm transition-all ${
-                      plan.highlight
-                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40'
-                        : 'bg-slate-700 hover:bg-slate-600 text-white'
+                    className={`block text-center py-3 rounded-full font-semibold text-sm transition-opacity hover:opacity-90 ${
+                      plan.highlight ? 'bg-white text-black' : 'bg-white text-black'
                     }`}
                   >
                     {plan.cta}
                   </Link>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Employer pricing */}
-          <div>
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">For Employers</h3>
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  name: 'Pay per hire',
-                  price: '$99',
-                  period: '/verified hire',
-                  features: ['Full candidate profile access', 'WorkProof trial booking', 'AI FitScore matching', 'Blind matching mode', 'EEOC audit logs', 'ZK disclosure verification'],
-                  cta: 'Start hiring',
-                  href: '/employer/register',
-                  highlight: false,
-                },
-                {
-                  name: 'Growth',
-                  price: '$2,000',
-                  period: '/month',
-                  features: ['Everything in Pay per hire', 'Unlimited profile views', 'Up to 20 active roles', 'RoleFit AI requirement extraction', 'WorkProof trial discounts', 'TrustChain referral network', 'Priority support'],
-                  cta: 'Start free trial',
-                  href: '/employer/register?plan=growth',
-                  highlight: true,
-                },
-                {
-                  name: 'Enterprise',
-                  price: 'Custom',
-                  period: '',
-                  features: ['Everything in Growth', 'ATS integration (Greenhouse/Lever/Ashby)', 'Custom AI model fine-tuning', 'Dedicated compliance officer', 'SOC 2 audit support', 'Multi-region data residency', 'SLA 99.99% uptime', 'Hire Guarantee Insurance'],
-                  cta: 'Contact sales',
-                  href: '/contact',
-                  highlight: false,
-                },
-              ].map((plan, i) => (
-                <motion.div
-                  key={plan.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className={`p-7 rounded-3xl border relative ${
-                    plan.highlight
-                      ? 'bg-violet-600/10 border-violet-500/50 shadow-2xl shadow-violet-900/30'
-                      : 'bg-slate-800/40 border-slate-700'
-                  }`}
-                >
-                  {plan.highlight && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-violet-600 rounded-full text-xs font-bold text-white">
-                      Best value
-                    </div>
-                  )}
-                  <h4 className="font-bold text-white mb-1">{plan.name}</h4>
-                  <div className="flex items-baseline gap-1 mb-6">
-                    <span className="text-3xl font-black text-white">{plan.price}</span>
-                    <span className="text-slate-400 text-xs">{plan.period}</span>
-                  </div>
-                  <ul className="space-y-2 mb-8">
-                    {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
-                        <span className="text-emerald-400 mt-0.5 shrink-0">✓</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={plan.href}
-                    className={`block text-center py-3 rounded-xl font-bold text-sm transition-all ${
-                      plan.highlight
-                        ? 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-900/40'
-                        : 'bg-slate-700 hover:bg-slate-600 text-white'
-                    }`}
-                  >
-                    {plan.cta}
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-            <p className="text-center text-xs text-slate-600 mt-6">
-              WorkProof Live trials: $150-$500/trial (employer pays). Candidates receive $50-$200 within 48hrs.
-              ZK Disclosure Packages: $29-$199/package.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PROTOCOL ─────────────────────────────────────────────────────────── */}
-      <section id="protocol" className="py-24 bg-slate-950">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5 text-xs font-semibold text-emerald-400 mb-6">
-              Open source · MIT licensed
-            </div>
-            <h2 className="text-4xl sm:text-5xl font-black text-white mb-6">
-              Built on open standards.<br />
-              <span className="text-emerald-400">OpenRep Protocol.</span>
-            </h2>
-            <p className="text-slate-400 text-lg leading-relaxed mb-10 max-w-2xl mx-auto">
-              ATTESTA implements the OpenRep protocol — the open standard for professional trust,
-              built on W3C DID Core and VC Data Model 1.1. Universities, governments, and any platform
-              can issue verifiable credentials. Community-governed via DAO.
-            </p>
-            <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto mb-10">
-              {[
-                { label: 'W3C DID Core', icon: '⛓' },
-                { label: 'VC Data Model 1.1', icon: '📋' },
-                { label: 'ZK Disclosure Protocol', icon: '🔐' },
-              ].map(item => (
-                <div key={item.label} className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700 text-center">
-                  <span className="text-2xl mb-2 block">{item.icon}</span>
-                  <p className="text-xs text-slate-400 font-medium">{item.label}</p>
                 </div>
               ))}
             </div>
-            <a
-              href="https://github.com/attesta-io/openrep"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 rounded-xl font-semibold text-sm transition-all"
-            >
-              View OpenRep on GitHub
-              <span>→</span>
-            </a>
-          </motion.div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-widest mb-6 text-center text-white/72">For employers</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                {
+                  name: 'Pay per hire', price: '$99', period: '/verified hire',
+                  features: ['Full candidate profile access', 'AI FitScore matching', 'Blind matching mode'],
+                  cta: 'Start hiring', href: '/employer/register', highlight: false,
+                },
+                {
+                  name: 'Growth', price: '$2,000', period: '/month',
+                  features: ['Everything in Pay per hire', 'Unlimited profile views', 'Up to 20 active roles'],
+                  cta: 'Start free trial', href: '/employer/register?plan=growth', highlight: true,
+                },
+                {
+                  name: 'Enterprise', price: 'Custom', period: '',
+                  features: ['Everything in Growth', 'ATS integrations', 'Dedicated compliance officer'],
+                  cta: 'Contact sales', href: '/contact', highlight: false,
+                },
+              ].map(plan => (
+                <div
+                  key={plan.name}
+                  className="rounded-[20px] p-8"
+                  style={plan.highlight ? { backgroundColor: '#494fdf' } : { backgroundColor: '#16181a' }}
+                >
+                  <h4 className="font-semibold mb-1">{plan.name}</h4>
+                  <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-2xl font-semibold tracking-[-0.02em]">{plan.price}</span>
+                    <span className="text-xs opacity-72">{plan.period}</span>
+                  </div>
+                  <ul className="space-y-2 mb-8">
+                    {plan.features.map(f => (
+                      <li key={f} className="flex items-start gap-2 text-sm">
+                        <span className="mt-0.5 shrink-0">✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={plan.href}
+                    className="block text-center py-3 rounded-full font-semibold text-sm bg-white text-black transition-opacity hover:opacity-90"
+                  >
+                    {plan.cta}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── FAQ ──────────────────────────────────────────────────────────────── */}
-      <section className="py-24 bg-slate-900/40 border-t border-slate-800">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-4xl font-black text-white mb-4">Common questions</h2>
-            <p className="text-slate-400">Everything you need to know about how ATTESTA works.</p>
+      {/* ── PROTOCOL — light catalogue band ──────────────────────────────────── */}
+      <section id="protocol" className="bg-white py-[88px] px-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold mb-6"
+            style={{ backgroundColor: '#f4f4f4', color: '#191c1f' }}
+          >
+            Open source · MIT licensed
           </div>
-          <div className="space-y-3">
+          <h2 className="text-[clamp(1.75rem,4vw,3rem)] font-semibold tracking-[-0.02em] mb-5" style={{ color: '#191c1f' }}>
+            Built on open standards.
+          </h2>
+          <p className="text-lg leading-relaxed mb-10 max-w-xl mx-auto" style={{ color: '#505a63' }}>
+            ATTESTA implements the OpenRep protocol — the open standard for professional trust,
+            built on W3C DID Core and VC Data Model 1.1. Community-governed via DAO.
+          </p>
+          <div className="grid grid-cols-3 gap-3 max-w-md mx-auto mb-10">
+            {['W3C DID Core', 'VC Data Model 1.1', 'ZK Disclosure'].map(label => (
+              <div key={label} className="p-4 rounded-[12px] border border-[#e2e2e7] text-center">
+                <p className="text-xs font-medium" style={{ color: '#505a63' }}>{label}</p>
+              </div>
+            ))}
+          </div>
+          <a
+            href="https://github.com/attesta-io/openrep"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm bg-black text-white hover:opacity-90 transition-opacity"
+          >
+            View OpenRep on GitHub
+          </a>
+        </div>
+      </section>
+
+      {/* ── FAQ — light catalogue band ───────────────────────────────────────── */}
+      <section className="bg-white py-[88px] px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-10">
+            <h2 className="text-3xl font-semibold tracking-[-0.02em] mb-3" style={{ color: '#191c1f' }}>Common questions</h2>
+            <p style={{ color: '#505a63' }}>Everything you need to know about how ATTESTA works.</p>
+          </div>
+          <div>
             {FAQS.map((faq, i) => (
               <FAQItem key={faq.q} q={faq.q} a={faq.a} index={i} />
             ))}
@@ -798,103 +640,71 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── FINAL CTA ────────────────────────────────────────────────────────── */}
-      <section className="py-32 bg-slate-950 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 via-slate-950 to-violet-900/20 pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-5xl sm:text-6xl font-black text-white mb-6 leading-tight"
-          >
-            Your reputation<br />
-            <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-              shouldn&apos;t live in a PDF.
-            </span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-slate-400 text-xl mb-10"
-          >
-            Join ATTESTA. Build a cryptographically verified professional identity
-            that follows you everywhere and can never be faked.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-          >
+      {/* ── FINAL CTA — hero-band-dark ───────────────────────────────────────── */}
+      <section className="bg-black py-[120px] px-6">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-[clamp(2.25rem,5.5vw,4.5rem)] font-semibold tracking-[-0.02em] leading-[1.05] mb-6">
+            Your reputation shouldn&apos;t <span style={{ color: '#494fdf' }}>live in a PDF.</span>
+          </h2>
+          <p className="text-white/72 text-lg mb-10">
+            Build a cryptographically verified professional identity that follows you everywhere and can never be faked.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
             <Link
               href="/signup"
-              className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all text-lg shadow-2xl shadow-indigo-900/60 hover:-translate-y-0.5"
+              className="bg-white text-black font-semibold rounded-full px-8 h-12 flex items-center justify-center text-[15px] hover:opacity-90 transition-opacity"
             >
-              Create free profile →
+              Create free profile
             </Link>
             <Link
               href="/employer/register"
-              className="px-10 py-4 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-bold rounded-xl transition-all text-lg"
+              className="border border-white/[0.28] text-white font-semibold rounded-full px-8 h-12 flex items-center justify-center text-[15px] hover:bg-white/[0.06] transition-colors"
             >
               Hire smarter
             </Link>
-          </motion.div>
-          <p className="mt-6 text-xs text-slate-600">Free forever for candidates · No credit card required</p>
+          </div>
+          <p className="text-xs text-white/50">Free forever for candidates · No credit card required</p>
         </div>
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-800 bg-slate-950 py-12 px-6">
-        <div className="max-w-7xl mx-auto">
+      <footer className="bg-black py-20 px-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="max-w-[1200px] mx-auto">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
             <div className="col-span-2 sm:col-span-1">
-              <span className="font-black text-xl bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent block mb-3">
-                ATTESTA
-              </span>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <span className="font-semibold text-lg block mb-3" style={{ color: '#494fdf' }}>ATTESTA</span>
+              <p className="text-xs text-white/50 leading-relaxed">
                 Trust infrastructure for professional work. Replacing resumes, ATS, and interviews with cryptographic proof.
               </p>
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Product</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider mb-4 text-white/72">Product</h4>
               <ul className="space-y-2.5">
                 {['ProofWork', 'WorkProof Live', 'TrustChain', 'RoleFit AI', 'OpenRep Protocol'].map(item => (
-                  <li key={item}><a href="#product" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">{item}</a></li>
+                  <li key={item}><a href="#product" className="text-xs text-white/50 hover:text-white/80 transition-colors">{item}</a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Company</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider mb-4 text-white/72">Company</h4>
               <ul className="space-y-2.5">
-                {['About', 'Blog', 'Careers', 'Press', 'Contact'].map(item => (
-                  <li key={item}><a href="#" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">{item}</a></li>
+                {['About', 'Blog', 'Careers', 'Contact'].map(item => (
+                  <li key={item}><a href="#" className="text-xs text-white/50 hover:text-white/80 transition-colors">{item}</a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Legal</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider mb-4 text-white/72">Legal</h4>
               <ul className="space-y-2.5">
                 {[['Privacy', '/privacy'], ['Terms', '/terms'], ['GDPR', '/gdpr'], ['Security', '/security']].map(([label, href]) => (
-                  <li key={label}><Link href={href ?? '#'} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">{label}</Link></li>
+                  <li key={label}><Link href={href ?? '#'} className="text-xs text-white/50 hover:text-white/80 transition-colors">{label}</Link></li>
                 ))}
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-slate-600">© 2026 ATTESTA Inc. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5 text-xs text-slate-600">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                All systems operational
-              </span>
-              <span className="text-xs text-slate-700">·</span>
-              <span className="text-xs text-slate-600">Polygon PoS · W3C DID · GDPR</span>
-            </div>
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-xs text-white/50">© 2026 ATTESTA Inc. All rights reserved.</p>
+            <span className="text-xs text-white/50">Polygon PoS · W3C DID · GDPR</span>
           </div>
         </div>
       </footer>

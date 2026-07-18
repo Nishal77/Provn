@@ -11,5 +11,4 @@ export type {
   RefreshToken,
   VerificationToken,
   VerificationTier,
-  AuthProvider,
 } from '@prisma/client'
