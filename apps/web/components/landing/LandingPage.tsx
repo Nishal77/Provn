@@ -614,14 +614,12 @@ export function LandingPage() {
               </div>
             ))}
           </div>
-          <a
-            href="https://github.com/attesta-io/openrep"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm bg-black text-white hover:opacity-90 transition-opacity"
+          <span
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-sm"
+            style={{ backgroundColor: '#f4f4f4', color: '#8d969e' }}
           >
-            View OpenRep on GitHub
-          </a>
+            OpenRep repository — opening at launch
+          </span>
         </div>
       </section>
 
